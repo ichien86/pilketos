@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env*.local
+*.log
+npm-debug.log*
+coverage
+tests
+.claude
+docker-compose.yml
+public/uploads/*
+!public/uploads/.gitkeep

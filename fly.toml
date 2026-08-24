@@ -1,0 +1,50 @@
+# Ganti "app" di bawah sesuai nama yang tersedia saat `fly apps create`.
+# Arsitektur TIDAK diubah dari versi lokal: satu image, dua process group --
+# "app" (server Next.js, `npm run start`) dan "cron" (`npm run cron`, sweep
+# TTL tiap 30 detik persis seperti scripts/cron-sweep.ts di lingkungan dev).
+app = "pilketos"
+primary_region = "sin" # Singapore -- latensi terdekat ke Indonesia
+
+[build]
+
+[env]
+  PORT = "3000"
+  UPLOAD_DIR = "./public/uploads"
+  CRON_SWEEP_INTERVAL_SECONDS = "30"
+  # MONGODB_URI, MONGODB_DB_PROD, MONGODB_DB_SIMULASI, AUTH_JWT_SECRET,
+  # SECRET_CHECKIN, DEFAULT_PASSWORD -- SEMUA lewat `fly secrets set`,
+  # JANGAN taruh di sini (file ini bukan rahasia, ikut ke git).
+
+[processes]
+  app = "npm run start"
+  cron = "npm run cron"
+
+[[services]]
+  processes = ["app"]
+  internal_port = 3000
+  protocol = "tcp"
+  auto_stop_machines = false   # hari-H butuh selalu nyala, bukan cold-start
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = "15s"
+    grace_period = "10s"
+    method = "get"
+    path = "/"
+    protocol = "http"
+    timeout = "5s"
+
+[mounts]
+  source = "pilketos_uploads"
+  destination = "/app/public/uploads"
+  processes = ["app"] # "cron" tidak menyentuh video, tidak perlu volume ini
