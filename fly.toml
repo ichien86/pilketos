@@ -52,7 +52,7 @@ primary_region = "sin" # Singapore -- latensi terdekat ke Indonesia
 [[vm]]
   processes = ["app"]
   size = "shared-cpu-1x"
-  memory = "1024mb" # default 256mb kurang -- model AI hilangkan background (lib/photo.ts) butuh lebih
+  memory = "2048mb" # diuji langsung: proses hilangkan-background butuh puncak ~1.2GB, 1024mb OOM-killed (exit 137)
 
 [[vm]]
   processes = ["cron"]
