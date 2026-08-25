@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import type { AkunPengguna, ResetLog } from "@/types";
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     typeof body?.username === "string" ? body.username : "";
   if (!usernameAtauNama) return errorJson("username wajib diisi", 400);
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const akun = await db
     .collection<AkunPengguna>("akun_pengguna")
     .findOne({ username: usernameAtauNama, role: "pemilih" });

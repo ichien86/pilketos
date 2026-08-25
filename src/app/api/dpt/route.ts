@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
+import { kandidatWajibDitonton } from "@/lib/eligibility";
 import { newId } from "@/lib/id";
-import type { AkunPengguna, Kandidat, PemilihDpt, ProgressPemilih } from "@/types";
+import type { AkunPengguna, PemilihDpt, ProgressPemilih } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,8 @@ export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
 
-  const db = await getDb("prod");
+  const mode = await resolveAppMode();
+  const db = await getDb(mode);
   const list = await db.collection<PemilihDpt>("pemilih_dpt").find({}).sort({ created_at: 1 }).toArray();
   const akunList = await db
     .collection<AkunPengguna>("akun_pengguna")
@@ -25,25 +27,18 @@ export async function GET(req: NextRequest) {
     .toArray();
   const aktivasiByPemilih = new Map(akunList.map((a) => [a.pemilih_id, a.aktivasi_selesai]));
 
-  // "Memenuhi persyaratan pemilih" = sudah menonton video sosialisasi SEMUA
-  // paslon yang terkunci saat fase sosialisasi dibuka (persis logika US-12 di
-  // /api/progress, cuma dihitung sekaligus untuk semua pemilih di sini).
-  const faseSosialisasi = await getFase("sosialisasi");
-  const kandidatTerkunciId = faseSosialisasi.kandidat_terkunci ?? [];
-  const kandidatRelevan = kandidatTerkunciId.length
-    ? await db
-        .collection<Kandidat>("kandidat")
-        .find({ _id: { $in: kandidatTerkunciId }, status: { $ne: "dibatalkan" } }, { projection: { _id: 1 } })
-        .toArray()
-    : [];
-  const totalWajibTonton = kandidatRelevan.length;
+  // "Memenuhi persyaratan pemilih" = sudah menonton video sosialisasi semua
+  // paslon wajib (persis logika US-12 di /api/progress dan eligibility.ts,
+  // cuma dihitung sekaligus untuk semua pemilih di sini).
+  const kandidatWajib = await kandidatWajibDitonton(db, mode);
+  const totalWajibTonton = kandidatWajib.length;
   const progressList = await db
     .collection<ProgressPemilih>("progress_pemilih")
     .find({ pemilih_id: { $in: list.map((p) => p._id) } })
     .toArray();
-  const idKandidatRelevan = new Set(kandidatRelevan.map((k) => k._id));
+  const idKandidatWajib = new Set(kandidatWajib);
   const progressByPemilih = new Map(
-    progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatRelevan.has(id)).length])
+    progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
 
   return NextResponse.json(
@@ -69,9 +64,12 @@ export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const fase = await getFase("pendataan");
-  if (fase.status === "ditutup") {
-    return errorJson("Masa pendataan sudah ditutup -- tidak bisa menambah pemilih baru", 403);
+  const mode = await resolveAppMode();
+  if (mode === "prod") {
+    const fase = await getFase("pendataan");
+    if (fase.status === "ditutup") {
+      return errorJson("Masa pendataan sudah ditutup -- tidak bisa menambah pemilih baru", 403);
+    }
   }
 
   const body = await req.json().catch(() => null);
@@ -87,7 +85,7 @@ export async function POST(req: NextRequest) {
   }
   if (!TANGGAL_RE.test(tanggalLahir)) return errorJson("tanggal_lahir wajib format YYYY-MM-DD", 400);
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const bentrok = await db.collection<PemilihDpt>("pemilih_dpt").findOne({ nis_nip: nisNip });
   if (bentrok) return errorJson(`Nomor identitas sudah terdaftar di sistem: ${nisNip}`, 409);
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import type { ProgressPemilih, VideoKampanye } from "@/types";
 
@@ -18,12 +18,15 @@ export async function POST(
     return errorJson("Tidak diizinkan", 403);
   }
 
-  const fase = await getFase("sosialisasi");
-  if (fase.status !== "aktif") {
-    return errorJson("Masa sosialisasi sedang tidak berlangsung", 403);
+  const mode = await resolveAppMode();
+  if (mode === "prod") {
+    const fase = await getFase("sosialisasi");
+    if (fase.status !== "aktif") {
+      return errorJson("Masa sosialisasi sedang tidak berlangsung", 403);
+    }
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const video = await db.collection<VideoKampanye>("video_kampanye").findOne({ _id: params.id, status: "aktif" });
   if (!video) return errorJson("Video tidak ditemukan", 404);
 

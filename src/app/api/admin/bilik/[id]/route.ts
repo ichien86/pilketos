@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import type { Bilik } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function DELETE(
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const bilik = await db.collection<Bilik>("bilik").findOne({ _id: params.id });
   if (!bilik) return errorJson("Bilik tidak ditemukan", 404);
   if (bilik.status === "terisi") {

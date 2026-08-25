@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import { saveUploadedVideo } from "@/lib/upload";
 import { newId } from "@/lib/id";
 import type { VideoKampanye } from "@/types";
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     return errorJson(e instanceof Error ? e.message : "Gagal menyimpan video", 400);
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const doc: VideoKampanye = {
     _id: newId(),
     kandidat_id: claims.kandidatId,
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const filter: Record<string, unknown> = { status: "aktif" };
   if (claims?.role === "kandidat" && claims.kandidatId) {
     filter.kandidat_id = claims.kandidatId;

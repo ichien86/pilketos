@@ -22,7 +22,7 @@ export default function PanitiaHomePage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">Hari-H / Simulasi</h2>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">Hari-H / Uji Coba</h2>
         <div className="bg-white rounded-xl shadow divide-y">
           <NavItem href="/panitia/checkin" label="Check-in Pemilih" desc="Scan identitas & ACC masuk bilik" />
           <NavItem href="/panitia/bilik-monitor" label="Pantauan Bilik" desc="Status kosong/terisi real-time" />

@@ -21,7 +21,7 @@ const NAMA_LABEL: Record<string, string> = {
   pendataan: "Pendataan",
   pendaftaran_calon: "Pendaftaran Calon",
   sosialisasi: "Sosialisasi",
-  simulasi: "Simulasi (Gladi Bersih)",
+  simulasi: "Simulasi / Uji Coba",
   pemilihan: "Pemilihan (Hari-H)",
 };
 
@@ -102,6 +102,12 @@ export default function AdminFasePage() {
               <p className="text-xs text-slate-500">
                 status: <span className="font-mono">{f.status}</span>
               </p>
+              {f.nama_fase === "simulasi" && (
+                <p className="text-xs text-slate-400 mt-1 max-w-md">
+                  Bisa dibuka/tutup kapan saja, tidak perlu menunggu fase lain -- semua fitur (DPT, kandidat, sosialisasi,
+                  hari-H) otomatis pakai data terpisah selama ini aktif, dan semua data itu hilang total begitu ditutup.
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               {f.status !== "aktif" && (

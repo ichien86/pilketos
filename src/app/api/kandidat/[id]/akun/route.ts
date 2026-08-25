@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import type { AkunPengguna, Kandidat } from "@/types";
 
@@ -16,7 +17,7 @@ export async function POST(
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["panitia", "admin"])) return errorJson("Tidak diizinkan", 403);
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const kandidat = await db.collection<Kandidat>("kandidat").findOne({ _id: params.id });
   if (!kandidat) return errorJson("Kandidat tidak ditemukan", 404);
 

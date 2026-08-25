@@ -31,7 +31,7 @@ const NAMA_LABEL: Record<string, string> = {
   pendataan: "Pendataan",
   pendaftaran_calon: "Pendaftaran Calon",
   sosialisasi: "Sosialisasi",
-  simulasi: "Simulasi (Gladi Bersih)",
+  simulasi: "Simulasi / Uji Coba",
   pemilihan: "Pemilihan (Hari-H)",
 };
 

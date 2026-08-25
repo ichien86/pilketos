@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import type { Kandidat } from "@/types";
 
@@ -14,9 +14,12 @@ export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["panitia", "admin"])) return errorJson("Tidak diizinkan", 403);
 
-  const fasePendaftaran = await getFase("pendaftaran_calon");
-  if (fasePendaftaran.status !== "aktif") {
-    return errorJson("Kandidat baru hanya bisa didaftarkan selama masa pendaftaran calon aktif", 403);
+  const mode = await resolveAppMode();
+  if (mode === "prod") {
+    const fasePendaftaran = await getFase("pendaftaran_calon");
+    if (fasePendaftaran.status !== "aktif") {
+      return errorJson("Kandidat baru hanya bisa didaftarkan selama masa pendaftaran calon aktif", 403);
+    }
   }
 
   const body = await req.json().catch(() => null);
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
     return errorJson("nomor_urut wajib bilangan bulat positif", 400);
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const bentrok = await db
     .collection<Kandidat>("kandidat")
     .findOne({ nomor_urut: nomorUrut, status: { $ne: "dibatalkan" } });
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
 // cuma diberi visibilitas lebih di GET ini, tidak di endpoint tulis mana pun).
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const isPengelola = claims && (claims.role === "panitia" || claims.role === "admin" || claims.role === "pengawas");
   const filter: import("mongodb").Filter<Kandidat> = isPengelola ? {} : { status: "aktif" };
   const list = await db

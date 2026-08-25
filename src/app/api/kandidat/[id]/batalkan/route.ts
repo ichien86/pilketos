@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import type { Kandidat } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function POST(
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["panitia", "admin"])) return errorJson("Tidak diizinkan", 403);
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const kandidat = await db.collection<Kandidat>("kandidat").findOne({ _id: params.id });
   if (!kandidat) return errorJson("Kandidat tidak ditemukan", 404);
   if (kandidat.status !== "aktif") {

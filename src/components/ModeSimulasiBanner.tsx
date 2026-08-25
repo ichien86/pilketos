@@ -31,7 +31,7 @@ export default function ModeSimulasiBanner() {
   if (!simulasiAktif) return null;
   return (
     <div className="sticky top-0 z-50 bg-amber-400 text-amber-950 text-center py-2 font-bold tracking-wide text-sm">
-      ⚠ MODE SIMULASI -- data & suara di halaman ini TIDAK dihitung sebagai hasil sungguhan
+      ⚠ MODE UJI COBA -- DPT, kandidat, video, dan suara di sini terpisah dari data asli & akan HILANG TOTAL saat mode ini ditutup
     </div>
   );
 }

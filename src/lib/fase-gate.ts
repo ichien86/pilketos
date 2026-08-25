@@ -78,3 +78,17 @@ export async function resolveHariHMode(): Promise<DbMode> {
 export function urutanIndex(nama: StatusFase): number {
   return URUTAN_FASE.indexOf(nama);
 }
+
+/**
+ * Mode aplikasi untuk fitur DI LUAR alur hari-H (DPT, kandidat, video/
+ * sosialisasi, bilik) -- fase "simulasi" sekarang berfungsi ganda sebagai
+ * mode "uji coba": begitu aktif, SEMUA fitur itu otomatis pindah ke database
+ * simulasi (data terpisah, direset total saat fase ini ditutup -- lihat
+ * lib/simulasi.ts), tanpa perlu buka/tutup fase pendataan/pendaftaran_calon/
+ * sosialisasi yang ASLI. TIDAK PERNAH throw (beda dari resolveHariHMode) --
+ * fitur-fitur ini harus selalu bisa dipakai, aktif "prod" adalah default.
+ */
+export async function resolveAppMode(): Promise<DbMode> {
+  const simulasi = await getFase("simulasi");
+  return simulasi.status === "aktif" ? "simulasi" : "prod";
+}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import { parseDptExcel, type BarisDptError, type BarisDptValid } from "@/lib/dpt-import";
 import type { AkunPengguna, PemilihDpt } from "@/types";
@@ -15,9 +15,12 @@ export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const fase = await getFase("pendataan");
-  if (fase.status === "ditutup") {
-    return errorJson("Masa pendataan sudah ditutup -- import DPT tidak bisa lagi dilakukan", 403);
+  const appMode = await resolveAppMode();
+  if (appMode === "prod") {
+    const fase = await getFase("pendataan");
+    if (fase.status === "ditutup") {
+      return errorJson("Masa pendataan sudah ditutup -- import DPT tidak bisa lagi dilakukan", 403);
+    }
   }
 
   const form = await req.formData().catch(() => null);
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const { valid, error } = await parseDptExcel(buffer);
 
-  const db = await getDb("prod");
+  const db = await getDb(appMode);
 
   // Cek duplikat terhadap data yang SUDAH ada di DB (di luar duplikat di dalam file,
   // yang sudah dicek oleh parseDptExcel).

@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
 import type { Bilik } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-// Bagian 4.2 / US-26 -- konfigurasi jumlah bilik FISIK produksi. Selalu di
-// database produksi (bilik simulasi dikelola otomatis oleh siklus hidup
-// fase simulasi, lihat lib/simulasi.ts) -- admin bisa menyiapkan ini kapan
-// saja sebelum hari-H, tidak terikat fase mana yang sedang aktif.
+// Bagian 4.2 / US-26 -- konfigurasi jumlah bilik fisik, tidak terikat fase
+// mana yang sedang aktif (admin bisa menyiapkan ini kapan saja sebelum
+// hari-H). Mode uji coba (fase simulasi aktif) -- bilik-nya juga terpisah,
+// jadi bisa dites lewat UI yang sama tanpa menyentuh bilik fisik asli.
 export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     return errorJson("nomor_bilik wajib bilangan bulat positif", 400);
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const bentrok = await db.collection<Bilik>("bilik").findOne({ nomor_bilik: nomorBilik });
   if (bentrok) return errorJson("Nomor bilik sudah dipakai", 409);
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const list = await db.collection<Bilik>("bilik").find({}).sort({ nomor_bilik: 1 }).toArray();
   return NextResponse.json(list);
 }

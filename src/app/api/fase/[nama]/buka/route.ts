@@ -12,6 +12,12 @@ export const dynamic = "force-dynamic";
 // US-18 -- buka fase secara manual & berurutan; reopen (mundur) butuh force=true
 // (dikonfirmasi dua kali di UI) sebagai skenario darurat.
 // US-21 -- fase "pemilihan" tidak bisa dibuka kalau ada item checklist Go/No-Go belum lolos.
+// "simulasi" (mode uji coba) DIKECUALIKAN dari urutan & syarat force reopen --
+// datanya toh selalu direset total tiap ditutup (teardownSimulasi), jadi
+// buka/tutup berulang untuk uji coba bukan "skenario darurat" yang perlu
+// dikonfirmasi seperti fase produksi lain, dan tidak perlu pendataan/
+// pendaftaran_calon/sosialisasi ASLI selesai dulu -- itu justru fitur-fitur
+// yang mau diuji coba di dalamnya sendiri (lihat resolveAppMode()).
 export async function POST(
   req: NextRequest,
   { params }: { params: { nama: string } }
@@ -35,19 +41,21 @@ export async function POST(
   if (target.status === "aktif") return errorJson("Fase ini sudah aktif", 409);
 
   const isReopen = target.status === "ditutup";
-  if (isReopen) {
-    if (!force) {
-      return errorJson(
-        "Fase ini sudah pernah ditutup -- membuka ulang adalah skenario darurat, kirim force=true (setelah konfirmasi dua kali di UI)",
-        409
-      );
-    }
-  } else {
-    const idx = urutanIndex(nama);
-    if (idx > 0) {
-      const prev = all[idx - 1];
-      if (prev.status !== "ditutup") {
-        return errorJson(`Fase "${prev.nama_fase}" belum ditutup -- fase harus dibuka berurutan`, 409);
+  if (nama !== "simulasi") {
+    if (isReopen) {
+      if (!force) {
+        return errorJson(
+          "Fase ini sudah pernah ditutup -- membuka ulang adalah skenario darurat, kirim force=true (setelah konfirmasi dua kali di UI)",
+          409
+        );
+      }
+    } else {
+      const idx = urutanIndex(nama);
+      if (idx > 0) {
+        const prev = all[idx - 1];
+        if (prev.status !== "ditutup") {
+          return errorJson(`Fase "${prev.nama_fase}" belum ditutup -- fase harus dibuka berurutan`, 409);
+        }
       }
     }
   }

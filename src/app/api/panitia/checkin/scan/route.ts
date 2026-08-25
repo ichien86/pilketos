@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   if (!pemilih) return errorJson("Data pemilih tidak ditemukan", 404);
 
   const akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ pemilih_id: pemilihId });
-  const lolosSyarat = await hitungLolosSyarat(db, pemilihId, akun);
+  const lolosSyarat = await hitungLolosSyarat(db, pemilihId, akun, mode);
 
   const sesiAktifSebelumnya = await db.collection<SesiPemilih>("sesi_pemilih").findOne({
     pemilih_id: pemilihId,

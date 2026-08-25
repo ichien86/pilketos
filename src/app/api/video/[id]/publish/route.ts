@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import type { Kandidat, VideoKampanye } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export async function POST(
     return errorJson("Tidak diizinkan", 403);
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   const video = await db.collection<VideoKampanye>("video_kampanye").findOne({ _id: params.id });
   if (!video) return errorJson("Video tidak ditemukan", 404);
   if (video.kandidat_id !== claims.kandidatId) return errorJson("Tidak diizinkan", 403);

@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import type { AkunPengguna, PemilihDpt } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 const TANGGAL_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-async function guardPendataanAktif() {
+async function guardPendataanAktif(mode: Awaited<ReturnType<typeof resolveAppMode>>) {
+  if (mode !== "prod") return null;
   const fase = await getFase("pendataan");
   if (fase.status === "ditutup") {
     return errorJson("Masa pendataan sudah ditutup -- data pemilih tidak bisa lagi diubah", 403);
@@ -21,10 +22,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const gagalGate = await guardPendataanAktif();
+  const mode = await resolveAppMode();
+  const gagalGate = await guardPendataanAktif(mode);
   if (gagalGate) return gagalGate;
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const pemilih = await db.collection<PemilihDpt>("pemilih_dpt").findOne({ _id: params.id });
   if (!pemilih) return errorJson("Data pemilih tidak ditemukan", 404);
   const akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ pemilih_id: pemilih._id });
@@ -72,10 +74,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const gagalGate = await guardPendataanAktif();
+  const mode = await resolveAppMode();
+  const gagalGate = await guardPendataanAktif(mode);
   if (gagalGate) return gagalGate;
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const pemilih = await db.collection<PemilihDpt>("pemilih_dpt").findOne({ _id: params.id });
   if (!pemilih) return errorJson("Data pemilih tidak ditemukan", 404);
 

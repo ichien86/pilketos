@@ -2,19 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { hashPassword, verifyPassword, setSessionCookie } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import type { AkunPengguna, PemilihDpt } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 // US-02 (aktivasi pertama) + US-05 (gerbang penutupan masa pendataan).
 export async function POST(req: NextRequest) {
-  const fase = await getFase("pendataan");
-  if (fase.status !== "aktif") {
-    return errorJson(
-      "Masa pendataan sudah ditutup -- aktivasi akun tidak bisa lagi dilakukan, tidak ada pengecualian",
-      403
-    );
+  const mode = await resolveAppMode();
+  if (mode === "prod") {
+    const fase = await getFase("pendataan");
+    if (fase.status !== "aktif") {
+      return errorJson(
+        "Masa pendataan sudah ditutup -- aktivasi akun tidak bisa lagi dilakukan, tidak ada pengecualian",
+        403
+      );
+    }
   }
 
   const body = await req.json().catch(() => null);
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const akun = await db
     .collection<AkunPengguna>("akun_pengguna")
     .findOne({ username, role: "pemilih" });

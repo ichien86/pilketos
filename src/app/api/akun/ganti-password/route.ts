@@ -19,8 +19,18 @@ export async function POST(req: NextRequest) {
   if (!passwordLama || !passwordBaru) return errorJson("password_lama dan password_baru wajib diisi", 400);
   if (passwordBaru.length < 8) return errorJson("Password baru minimal 8 karakter", 400);
 
-  const db = await getDb("prod");
-  const akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId });
+  // Akun kandidat/pemilih hasil mode uji coba (fase simulasi) hidup di
+  // database simulasi, bukan prod -- cek dua-duanya persis seperti
+  // /api/auth/login, supaya endpoint ini tetap benar terlepas dari akun
+  // yang sedang ganti password itu akun sungguhan atau akun uji coba.
+  const dbProd = await getDb("prod");
+  let db = dbProd;
+  let akun = await dbProd.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId });
+  if (!akun) {
+    const dbSimulasi = await getDb("simulasi").catch(() => null);
+    akun = (await dbSimulasi?.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId })) ?? null;
+    if (akun && dbSimulasi) db = dbSimulasi;
+  }
   if (!akun) return errorJson("Akun tidak ditemukan", 404);
 
   const cocok = await verifyPassword(passwordLama, akun.password_hash);

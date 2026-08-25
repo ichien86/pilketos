@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import type { Kandidat } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +15,15 @@ export async function POST(
   const claims = getSessionFromRequest(_req);
   if (!requireRole(claims, ["panitia", "admin"])) return errorJson("Tidak diizinkan", 403);
 
-  const fasePendaftaran = await getFase("pendaftaran_calon");
-  if (fasePendaftaran.status !== "aktif") {
-    return errorJson("Publish kandidat hanya bisa dilakukan selama masa pendaftaran calon aktif", 403);
+  const mode = await resolveAppMode();
+  if (mode === "prod") {
+    const fasePendaftaran = await getFase("pendaftaran_calon");
+    if (fasePendaftaran.status !== "aktif") {
+      return errorJson("Publish kandidat hanya bisa dilakukan selama masa pendaftaran calon aktif", 403);
+    }
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const kandidat = await db.collection<Kandidat>("kandidat").findOne({ _id: params.id });
   if (!kandidat) return errorJson("Kandidat tidak ditemukan", 404);
   if (kandidat.status !== "draft") {

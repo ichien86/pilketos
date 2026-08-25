@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const db = await getDb(mode);
   const akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ pemilih_id: pemilihId });
-  const lolosSyarat = await hitungLolosSyarat(db, pemilihId, akun);
+  const lolosSyarat = await hitungLolosSyarat(db, pemilihId, akun, mode);
   if (!lolosSyarat) {
     return errorJson("Belum memenuhi syarat -- tidak ada pengecualian", 403);
   }
