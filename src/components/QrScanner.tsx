@@ -43,34 +43,51 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
         }
         const { Html5Qrcode } = await import("html5-qrcode");
         if (cancelled) return;
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        const onSuccess = (decodedText: string) => onResult(decodedText);
+        const onDecodeError = () => {
+          // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
+        };
         // Konstruktor Html5Qrcode SENDIRI bisa throw (bukan cuma .start()), mis.
         // kalau browser/webview tidak benar-benar mendukung MediaDevices --
         // makanya ini ikut di dalam try, bukan cuma .start() di bawah. Kalau
         // ini luput, kegagalan jadi unhandled rejection: layar tetap kosong
         // (kotak hitam) TANPA pesan error dan TANPA browser sempat minta izin
         // kamera sama sekali, karena getUserMedia belum sempat dipanggil.
-        const scanner = new Html5Qrcode(containerId);
-        scannerRef.current = scanner;
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        const onSuccess = (decodedText: string) => onResult(decodedText);
-        const onDecodeError = () => {
-          // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
-        };
         try {
           // "ideal" (bukan "exact") -- lebih disukai kamera belakang, TAPI
           // tetap boleh browser pilih kamera lain kalau tidak ada yang persis
           // menandai dirinya "environment" (banyak laptop/webcam eksternal
           // tidak melaporkan facingMode sama sekali).
+          const scanner = new Html5Qrcode(containerId);
+          scannerRef.current = scanner;
           await scanner.start({ facingMode: { ideal: "environment" } }, config, onSuccess, onDecodeError);
         } catch (eEnvironment) {
+          if (cancelled) return;
           // Fallback: kamera APA PUN yang tersedia -- device tanpa kamera
           // belakang (laptop) tetap bisa dipakai, bukan gagal total. Ini
           // penyebab paling umum "izin sudah diizinkan tapi tetap gagal":
           // constraint facingMode tidak match kamera yang ada, BUKAN masalah
           // izin sama sekali.
+          //
+          // SENGAJA instance Html5Qrcode BARU di sini, bukan scanner.start()
+          // lagi di instance yang gagal -- instance yang gagal state
+          // internalnya masih "under transition" dari percobaan pertama,
+          // dan html5-qrcode menolak transisi baru di atasnya ("Cannot
+          // transition to a new state, already under transition").
           const cameras = await Html5Qrcode.getCameras().catch(() => []);
           if (cameras.length === 0) throw eEnvironment;
-          await scanner.start(cameras[0].id, config, onSuccess, onDecodeError);
+          // Bersihkan sisa DOM dari percobaan pertama (video/elemen yang
+          // sempat dibuat html5-qrcode di dalam container) sebelum instance
+          // baru dipasang di container yang sama.
+          try {
+            scannerRef.current?.clear();
+          } catch {
+            // idem seperti di cleanup effect -- aman diabaikan.
+          }
+          const scannerFallback = new Html5Qrcode(containerId);
+          scannerRef.current = scannerFallback;
+          await scannerFallback.start(cameras[0].id, config, onSuccess, onDecodeError);
         }
       } catch (e) {
         setError(formatCameraError(e));
