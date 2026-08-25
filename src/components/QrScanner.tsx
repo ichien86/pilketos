@@ -63,7 +63,10 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
 
   return (
     <div>
-      <div id={containerId.current} className="w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-slate-300" />
+      <div
+        id={containerId.current}
+        className="relative w-full max-w-sm mx-auto aspect-square overflow-hidden rounded-lg border border-slate-300 bg-slate-900"
+      />
       {error && <p className="text-red-600 text-sm mt-2">Kamera error: {error}</p>}
     </div>
   );
