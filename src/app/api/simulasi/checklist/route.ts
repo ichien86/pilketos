@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const body = await req.json().catch(() => null);
   const kode = typeof body?.kode === "string" ? body.kode : "";

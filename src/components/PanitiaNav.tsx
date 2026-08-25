@@ -5,6 +5,7 @@ const ITEMS = [
   { href: "/admin/dpt", label: "DPT" },
   { href: "/admin/kandidat", label: "Kandidat" },
   { href: "/admin/bilik", label: "Bilik" },
+  { href: "/panitia/checklist", label: "Checklist Go/No-Go" },
   { href: "/panitia/checkin", label: "Check-in" },
   { href: "/panitia/bilik-monitor", label: "Pantauan Bilik" },
   { href: "/panitia/exit-scan", label: "Scan Keluar" },

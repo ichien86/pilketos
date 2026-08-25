@@ -72,11 +72,6 @@ export default function AdminFasePage() {
     }
   }
 
-  async function toggleChecklist(kode: string, lolos: boolean) {
-    await apiFetch("/api/simulasi/checklist", { method: "PATCH", body: JSON.stringify({ kode, lolos }) });
-    refresh();
-  }
-
   return (
     <main className="min-h-screen p-4 max-w-3xl mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
@@ -89,7 +84,7 @@ export default function AdminFasePage() {
       </header>
 
       <p className="text-xs text-slate-400">
-        Pengelolaan DPT, kandidat, dan bilik sudah dipindah ke panel panitia pemilihan (mereka login dengan akun panitia, bukan admin).
+        Pengelolaan DPT, kandidat, bilik, dan checklist Go/No-Go sudah dipindah ke panel panitia pemilihan (mereka login dengan akun panitia, bukan admin).
       </p>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -126,13 +121,17 @@ export default function AdminFasePage() {
       </div>
 
       <div>
-        <h2 className="font-bold mb-2">Checklist Go/No-Go (sebelum buka fase Pemilihan)</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-bold">Checklist Go/No-Go (sebelum buka fase Pemilihan)</h2>
+          <span className="text-xs text-slate-400">{checklist.filter((c) => c.lolos).length} / {checklist.length} lolos</span>
+        </div>
+        <p className="text-xs text-slate-400 mb-2">Dicentang oleh panitia dari panel mereka -- tampilan di sini baca saja.</p>
         <div className="bg-white rounded-xl shadow divide-y">
           {checklist.map((c) => (
-            <label key={c.kode} className="flex items-center gap-3 p-3 cursor-pointer">
-              <input type="checkbox" checked={c.lolos} onChange={(e) => toggleChecklist(c.kode, e.target.checked)} />
+            <div key={c.kode} className="flex items-center gap-3 p-3">
+              <span className={c.lolos ? "text-emerald-600" : "text-slate-400"}>{c.lolos ? "✓" : "○"}</span>
               <span className={c.lolos ? "text-emerald-700" : "text-slate-700"}>{c.label}</span>
-            </label>
+            </div>
           ))}
         </div>
       </div>

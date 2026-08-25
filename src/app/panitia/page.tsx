@@ -18,6 +18,7 @@ export default function PanitiaHomePage() {
           <NavItem href="/admin/dpt" label="Data Pemilih Tetap (DPT)" desc="Import Excel, tambah/edit/hapus pemilih, reset password" />
           <NavItem href="/admin/kandidat" label="Kandidat" desc="Daftar paslon, foto, publish/batalkan, akun paslon" />
           <NavItem href="/admin/bilik" label="Bilik" desc="Konfigurasi jumlah bilik & cetak QR" />
+          <NavItem href="/panitia/checklist" label="Checklist Go/No-Go" desc="Verifikasi kesiapan sebelum admin buka fase Pemilihan" />
         </div>
       </section>
 
