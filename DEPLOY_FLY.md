@@ -69,35 +69,15 @@ lima dokumen fase langsung di mesin yang sudah punya akses ke Atlas:
 fly ssh console -C "npm run setup-db"
 ```
 
-**Belum ada script untuk membuat akun admin pertama** -- ini gap yang sama
-seperti di rencana Vercel sebelumnya, belum tergantung pilihan hosting. Untuk
-sekarang, cara sementara: jalankan shell interaktif dan insert manual.
+Lalu buat akun admin pertama:
 
 ```bash
-fly ssh console
-node -e "
-const { MongoClient } = require('mongodb');
-const bcrypt = require('bcryptjs');
-(async () => {
-  const client = await MongoClient.connect(process.env.MONGODB_URI);
-  const db = client.db(process.env.MONGODB_DB_PROD);
-  await db.collection('akun_pengguna').insertOne({
-    _id: require('crypto').randomUUID(),
-    pemilih_id: null, kandidat_id: null,
-    username: 'admin1',
-    password_hash: await bcrypt.hash('GANTI_PASSWORD_INI', 10),
-    role: 'admin', aktivasi_selesai: true, wajib_ganti_password: false,
-    created_at: new Date(),
-  });
-  console.log('admin1 dibuat');
-  process.exit(0);
-})();
-"
+fly ssh console -C "npm run create-admin -- admin1 PasswordKuatAnda123"
 ```
 
-> Beri tahu saya kalau mau, langkah ini bisa dijadikan `scripts/create-admin.ts`
-> yang permanen dan dipakai lewat `fly ssh console -C "npm run create-admin -- admin1 <password>"` --
-> jauh lebih rapi dari one-liner di atas.
+Jalankan perintah yang sama kapan saja untuk reset password admin yang sudah
+ada (kalau username-nya sudah dipakai akun admin, script ini menimpa
+password-nya, bukan menolak).
 
 ## 5. Domain & HTTPS
 

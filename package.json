@@ -11,7 +11,8 @@
     "test": "vitest run",
     "cron": "tsx scripts/cron-sweep.ts",
     "setup-db": "tsx scripts/setup-db.ts",
-    "seed-simulasi": "tsx scripts/seed-simulasi.ts"
+    "seed-simulasi": "tsx scripts/seed-simulasi.ts",
+    "create-admin": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
