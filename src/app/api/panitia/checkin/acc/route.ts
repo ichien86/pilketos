@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
     return errorJson("Belum memenuhi syarat -- tidak ada pengecualian", 403);
   }
 
+  // Pre-check cepat untuk pesan error yang jelas di jalur normal (satu
+  // request per saat) -- TAPI ini bukan penjamin atomiknya, cuma UX.
   const sesiAktifSebelumnya = await db.collection<SesiPemilih>("sesi_pemilih").findOne({
     pemilih_id: pemilihId,
     status: { $in: ["menunggu", "di_bilik", "sudah_memilih", "selesai"] },
@@ -61,7 +63,19 @@ export async function POST(req: NextRequest) {
     barcode_used_at: null,
     kandidat_dipilih_nomor: null,
   };
-  await db.collection<SesiPemilih>("sesi_pemilih").insertOne(doc);
+  try {
+    // Penjamin ATOMIK yang sesungguhnya: unique index partial di
+    // sesi_pemilih.pemilih_id (lib/indexes.ts). Pre-check findOne di atas
+    // bisa dilewati dua request yang tiba nyaris bersamaan (dua meja
+    // check-in, tap ganda) -- index inilah yang menolak salah satunya di
+    // sini lewat duplicate-key error, bukan pre-check-nya.
+    await db.collection<SesiPemilih>("sesi_pemilih").insertOne(doc);
+  } catch (e) {
+    if (e instanceof Error && "code" in e && (e as { code?: number }).code === 11000) {
+      return errorJson("Sudah pernah di-ACC hari ini", 409);
+    }
+    throw e;
+  }
 
   // voteToken dikirim di sini untuk ditampilkan panitia sbg QR fallback, DAN
   // tersedia lewat polling /api/checkin/status (keputusan desain #1) untuk HP pemilih.

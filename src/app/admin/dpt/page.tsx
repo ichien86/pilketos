@@ -43,6 +43,8 @@ export default function AdminDptPage() {
 
   const [pemilihList, setPemilihList] = useState<Pemilih[]>([]);
   const [cari, setCari] = useState("");
+  const [filterKelas, setFilterKelas] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi">("semua");
   const [tambahForm, setTambahForm] = useState(FORM_KOSONG);
   const [tambahError, setTambahError] = useState<string | null>(null);
   const [tambahBusy, setTambahBusy] = useState(false);
@@ -58,11 +60,26 @@ export default function AdminDptPage() {
     refreshPemilih();
   }, []);
 
+  const daftarKelas = useMemo(() => {
+    const set = new Set(pemilihList.map((p) => p.kelas).filter((k): k is string => !!k));
+    return Array.from(set).sort();
+  }, [pemilihList]);
+
   const listTersaring = useMemo(() => {
     const q = cari.trim().toLowerCase();
-    if (!q) return pemilihList;
-    return pemilihList.filter((p) => p.nama.toLowerCase().includes(q) || p.nis_nip.includes(q));
-  }, [pemilihList, cari]);
+    return pemilihList.filter((p) => {
+      const cocokCari = !q || p.nama.toLowerCase().includes(q) || p.nis_nip.includes(q) || (p.kelas ?? p.pangkat ?? "").toLowerCase().includes(q);
+      const cocokKelas = !filterKelas || p.kelas === filterKelas;
+      const cocokStatus =
+        filterStatus === "semua" ||
+        (filterStatus === "belum_aktivasi" && !p.aktivasi_selesai) ||
+        (filterStatus === "belum_sosialisasi" && p.memenuhi_syarat === false);
+      return cocokCari && cocokKelas && cocokStatus;
+    });
+  }, [pemilihList, cari, filterKelas, filterStatus]);
+
+  const jumlahBelumAktivasi = useMemo(() => pemilihList.filter((p) => !p.aktivasi_selesai).length, [pemilihList]);
+  const jumlahBelumSosialisasi = useMemo(() => pemilihList.filter((p) => p.memenuhi_syarat === false).length, [pemilihList]);
 
   async function jalankan(mode: "dry-run" | "commit") {
     if (!file) return;
@@ -252,15 +269,42 @@ export default function AdminDptPage() {
       )}
 
       <div className="bg-white rounded-xl shadow p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold">Daftar Pemilih ({pemilihList.length})</h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="font-bold">Daftar Pemilih ({listTersaring.length}/{pemilihList.length})</h2>
           <input
             className="border rounded-lg px-3 py-1.5 text-sm"
-            placeholder="Cari nama/NIS/NIP..."
+            placeholder="Cari nama/NIS/NIP/kelas..."
             value={cari}
             onChange={(e) => setCari(e.target.value)}
           />
         </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <button
+            onClick={() => setFilterStatus(filterStatus === "belum_aktivasi" ? "semua" : "belum_aktivasi")}
+            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_aktivasi" ? "bg-slate-900 text-white" : "bg-slate-100"}`}
+          >
+            <div className="font-bold text-sm">{jumlahBelumAktivasi}</div>
+            <div>belum aktivasi</div>
+          </button>
+          <button
+            onClick={() => setFilterStatus(filterStatus === "belum_sosialisasi" ? "semua" : "belum_sosialisasi")}
+            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_sosialisasi" ? "bg-slate-900 text-white" : "bg-slate-100"}`}
+          >
+            <div className="font-bold text-sm">{jumlahBelumSosialisasi}</div>
+            <div>belum sosialisasi</div>
+          </button>
+        </div>
+
+        {daftarKelas.length > 0 && (
+          <select className="border rounded-lg px-3 py-1.5 text-sm" value={filterKelas} onChange={(e) => setFilterKelas(e.target.value)}>
+            <option value="">Semua kelas</option>
+            {daftarKelas.map((k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+        )}
+
         <div className="divide-y max-h-[32rem] overflow-y-auto">
           {listTersaring.map((p) => (
             <div key={p._id} className="py-2.5 text-sm">

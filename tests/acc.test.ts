@@ -3,6 +3,8 @@ import { NextRequest } from "next/server";
 import { POST as accCheckin } from "@/app/api/panitia/checkin/acc/route";
 import { signSession } from "@/lib/auth";
 import { newId } from "@/lib/id";
+import { getDb } from "@/lib/db";
+import { ensureIndexes } from "@/lib/indexes";
 import { seedFaseAktifPemilihan, seedKandidatAktif, seedPemilihLolosSyarat } from "./helpers";
 
 function panitiaCookie(): string {
@@ -37,6 +39,22 @@ describe("ACC check-in (Bagian 3 langkah 2)", () => {
 
     const res2 = await accCheckin(accReq(pemilih._id));
     expect(res2.status).toBe(409);
+  });
+
+  it("race condition: dua ACC nyaris bersamaan untuk pemilih yang sama -- hanya satu berhasil", async () => {
+    await seedFaseAktifPemilihan();
+    // findOne-lalu-insert di endpoint tidak cukup untuk ini -- unique index
+    // partial (lib/indexes.ts) yang jadi penjamin atomiknya, jadi test ini
+    // HARUS memastikan index itu ada dulu, persis seperti production yang
+    // menjalankan `npm run setup-db` sebelum hari-H.
+    await ensureIndexes(await getDb("prod"));
+    const kandidat = await seedKandidatAktif(1);
+    const pemilih = await seedPemilihLolosSyarat([kandidat._id]);
+
+    const [res1, res2] = await Promise.all([accCheckin(accReq(pemilih._id)), accCheckin(accReq(pemilih._id))]);
+
+    const statuses = [res1.status, res2.status].sort();
+    expect(statuses).toEqual([200, 409]);
   });
 
   it("menolak ACC untuk pemilih yang belum memenuhi syarat", async () => {
