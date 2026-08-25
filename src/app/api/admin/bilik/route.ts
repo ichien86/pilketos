@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
   const db = await getDb("prod");
   const list = await db.collection<Bilik>("bilik").find({}).sort({ nomor_bilik: 1 }).toArray();
   return NextResponse.json(list);

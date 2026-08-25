@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // mode=commit menulis ke DB + membuat akun_pengguna otomatis per baris.
 export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const fase = await getFase("pendataan");
   if (fase.status === "ditutup") {

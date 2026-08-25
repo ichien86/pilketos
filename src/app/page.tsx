@@ -6,7 +6,7 @@ import { apiFetch, ApiError } from "@/lib/client-fetch";
 
 const ROLE_HOME: Record<string, string> = {
   admin: "/admin/fase",
-  panitia: "/panitia/checkin",
+  panitia: "/panitia",
   pemilih: "/pemilih",
   kandidat: "/kandidat/video",
   pengawas: "/pengawas",

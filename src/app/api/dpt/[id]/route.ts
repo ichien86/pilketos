@@ -19,7 +19,7 @@ async function guardPendataanAktif() {
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const gagalGate = await guardPendataanAktif();
   if (gagalGate) return gagalGate;
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const gagalGate = await guardPendataanAktif();
   if (gagalGate) return gagalGate;

@@ -81,13 +81,14 @@ export default function AdminFasePage() {
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Kontrol Fase</h1>
         <nav className="flex gap-3 text-sm text-blue-600">
-          <a href="/admin/dpt" className="hover:underline">DPT</a>
-          <a href="/admin/kandidat" className="hover:underline">Kandidat</a>
-          <a href="/admin/bilik" className="hover:underline">Bilik</a>
-          <a href="/admin/rekonsiliasi" className="hover:underline">Rekonsiliasi</a>
           <a href="/admin/panitia" className="hover:underline">Panitia</a>
+          <a href="/admin/rekonsiliasi" className="hover:underline">Rekonsiliasi</a>
         </nav>
       </header>
+
+      <p className="text-xs text-slate-400">
+        Pengelolaan DPT, kandidat, dan bilik sudah dipindah ke panel panitia pemilihan (mereka login dengan akun panitia, bukan admin).
+      </p>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 

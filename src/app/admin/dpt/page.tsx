@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
+import { useRole } from "@/lib/use-role";
 
 interface Ringkasan {
   total_baris_siswa: number;
@@ -21,12 +22,17 @@ interface Pemilih {
   pangkat: string | null;
   tanggal_lahir: string;
   aktivasi_selesai: boolean;
+  sosialisasi_ditonton: number;
+  sosialisasi_wajib: number;
+  memenuhi_syarat: boolean | null;
 }
 
 const FORM_KOSONG = { jenis: "siswa" as "siswa" | "guru", nis_nip: "", nama: "", kelas_pangkat: "", tanggal_lahir: "" };
 
 // US-01 -- import DPT (dry-run lalu commit) + CRUD manual per pemilih + US-04 reset password.
 export default function AdminDptPage() {
+  const role = useRole();
+  const isPengawas = role === "pengawas";
   const [file, setFile] = useState<File | null>(null);
   const [ringkasan, setRingkasan] = useState<Ringkasan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -151,9 +157,16 @@ export default function AdminDptPage() {
     <main className="min-h-screen p-4 max-w-3xl mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Data Pemilih Tetap (DPT)</h1>
-        <a href="/admin/fase" className="text-sm text-blue-600 hover:underline">Kembali</a>
+        <a href={role === "admin" ? "/admin/fase" : role === "pengawas" ? "/pengawas" : "/panitia"} className="text-sm text-blue-600 hover:underline">Kembali</a>
       </header>
 
+      {isPengawas && (
+        <p className="text-sm bg-slate-100 text-slate-500 rounded-lg p-3">
+          Akses pengawas: hanya bisa melihat data, tidak bisa mengubah apa pun di halaman ini.
+        </p>
+      )}
+
+      {!isPengawas && (
       <div className="bg-white rounded-xl shadow p-4 space-y-3">
         <h2 className="font-bold">Import dari Excel</h2>
         <p className="text-sm text-slate-600">
@@ -188,7 +201,9 @@ export default function AdminDptPage() {
           </div>
         )}
       </div>
+      )}
 
+      {!isPengawas && (
       <form onSubmit={tambahPemilih} className="bg-white rounded-xl shadow p-4 space-y-3">
         <h2 className="font-bold">Tambah Pemilih Manual</h2>
         <div className="grid grid-cols-2 gap-2">
@@ -234,6 +249,7 @@ export default function AdminDptPage() {
           Tambah
         </button>
       </form>
+      )}
 
       <div className="bg-white rounded-xl shadow p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -248,7 +264,7 @@ export default function AdminDptPage() {
         <div className="divide-y max-h-[32rem] overflow-y-auto">
           {listTersaring.map((p) => (
             <div key={p._id} className="py-2.5 text-sm">
-              {editId === p._id ? (
+              {editId === p._id && !isPengawas ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -289,12 +305,22 @@ export default function AdminDptPage() {
                     <p className="text-slate-400 text-xs">
                       {p.jenis === "siswa" ? p.kelas : p.pangkat} &middot; lahir {p.tanggal_lahir} &middot;{" "}
                       {p.aktivasi_selesai ? <span className="text-emerald-600">sudah aktivasi</span> : <span>belum aktivasi</span>}
+                      {" "}&middot;{" "}
+                      {p.memenuhi_syarat === null ? (
+                        <span>sosialisasi belum dibuka</span>
+                      ) : p.memenuhi_syarat ? (
+                        <span className="text-emerald-600">memenuhi syarat ({p.sosialisasi_ditonton}/{p.sosialisasi_wajib} video)</span>
+                      ) : (
+                        <span className="text-amber-600">belum memenuhi syarat ({p.sosialisasi_ditonton}/{p.sosialisasi_wajib} video)</span>
+                      )}
                     </p>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => mulaiEdit(p)} className="text-xs text-blue-600 hover:underline">Edit</button>
-                    <button onClick={() => hapusPemilih(p)} className="text-xs text-red-600 hover:underline">Hapus</button>
-                  </div>
+                  {!isPengawas && (
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => mulaiEdit(p)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                      <button onClick={() => hapusPemilih(p)} className="text-xs text-red-600 hover:underline">Hapus</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -303,6 +329,7 @@ export default function AdminDptPage() {
         </div>
       </div>
 
+      {!isPengawas && (
       <div className="bg-white rounded-xl shadow p-4 space-y-3">
         <h2 className="font-bold">Reset Password Pemilih</h2>
         <form onSubmit={resetPassword} className="flex gap-2">
@@ -321,6 +348,7 @@ export default function AdminDptPage() {
           </p>
         )}
       </div>
+      )}
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import CandidateAvatar from "@/components/CandidateAvatar";
+import { useRole } from "@/lib/use-role";
 
 interface Kandidat {
   _id: string;
@@ -20,6 +21,8 @@ const KOSONG = { nomor_urut: "", nama_ketua: "", nama_wakil: "", visi: "", misi:
 
 // US-06/07/08/09 -- CRUD kandidat, publish, batalkan, buat akun paslon.
 export default function AdminKandidatPage() {
+  const role = useRole();
+  const isPengawas = role === "pengawas";
   const [list, setList] = useState<Kandidat[]>([]);
   const [form, setForm] = useState(KOSONG);
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +104,16 @@ export default function AdminKandidatPage() {
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Kandidat</h1>
-        <a href="/admin/fase" className="text-sm text-blue-600 hover:underline">Kembali</a>
+        <a href={role === "admin" ? "/admin/fase" : role === "pengawas" ? "/pengawas" : "/panitia"} className="text-sm text-blue-600 hover:underline">Kembali</a>
       </header>
 
+      {isPengawas && (
+        <p className="text-sm bg-slate-100 text-slate-500 rounded-lg p-3">
+          Akses pengawas: hanya bisa melihat data, tidak bisa mengubah apa pun di halaman ini.
+        </p>
+      )}
+
+      {!isPengawas && (
       <form onSubmit={tambah} className="bg-white rounded-xl shadow p-4 space-y-3">
         <h2 className="font-bold">Tambah Kandidat (draft)</h2>
         <p className="text-xs text-slate-400">Foto diunggah belakangan di kartu kandidat di bawah, setelah kandidatnya dibuat.</p>
@@ -127,8 +137,9 @@ export default function AdminKandidatPage() {
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <button type="submit" className="w-full bg-slate-900 text-white rounded-lg py-2">Tambah</button>
       </form>
+      )}
 
-      {akunInfo && (
+      {akunInfo && !isPengawas && (
         <p className="text-sm bg-amber-50 rounded-lg p-3">
           Akun paslon dibuat: <b>{akunInfo.username}</b> / password sementara: <span className="font-mono">{akunInfo.password_sementara}</span>
         </p>
@@ -148,7 +159,7 @@ export default function AdminKandidatPage() {
               </span>
             </div>
 
-            {k.status === "draft" && (
+            {k.status === "draft" && !isPengawas && (
               <div className="grid grid-cols-2 gap-3">
                 {(["ketua", "wakil"] as const).map((slot) => {
                   const nama = slot === "ketua" ? k.nama_ketua : k.nama_wakil;
@@ -179,17 +190,19 @@ export default function AdminKandidatPage() {
               </div>
             )}
 
-            <div className="flex gap-2 flex-wrap">
-              {k.status === "draft" && (
-                <button onClick={() => publish(k._id)} className="text-sm bg-emerald-600 text-white rounded-lg px-3 py-1.5">Publish</button>
-              )}
-              {k.status === "aktif" && (
-                <>
-                  <button onClick={() => batalkan(k._id)} className="text-sm bg-red-600 text-white rounded-lg px-3 py-1.5">Batalkan</button>
-                  <button onClick={() => buatAkun(k._id)} className="text-sm border rounded-lg px-3 py-1.5">Buat Akun Paslon</button>
-                </>
-              )}
-            </div>
+            {!isPengawas && (
+              <div className="flex gap-2 flex-wrap">
+                {k.status === "draft" && (
+                  <button onClick={() => publish(k._id)} className="text-sm bg-emerald-600 text-white rounded-lg px-3 py-1.5">Publish</button>
+                )}
+                {k.status === "aktif" && (
+                  <>
+                    <button onClick={() => batalkan(k._id)} className="text-sm bg-red-600 text-white rounded-lg px-3 py-1.5">Batalkan</button>
+                    <button onClick={() => buatAkun(k._id)} className="text-sm border rounded-lg px-3 py-1.5">Buat Akun Paslon</button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

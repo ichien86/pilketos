@@ -51,12 +51,13 @@ export async function POST(req: NextRequest) {
 }
 
 // Daftar kandidat -- pemilih hanya melihat yang berstatus aktif;
-// panitia/admin melihat semua status.
+// panitia/admin/pengawas melihat semua status (pengawas read-only, jadi
+// cuma diberi visibilitas lebih di GET ini, tidak di endpoint tulis mana pun).
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   const db = await getDb("prod");
-  const isPanitia = claims && (claims.role === "panitia" || claims.role === "admin");
-  const filter: import("mongodb").Filter<Kandidat> = isPanitia ? {} : { status: "aktif" };
+  const isPengelola = claims && (claims.role === "panitia" || claims.role === "admin" || claims.role === "pengawas");
+  const filter: import("mongodb").Filter<Kandidat> = isPengelola ? {} : { status: "aktif" };
   const list = await db
     .collection<Kandidat>("kandidat")
     .find(filter)

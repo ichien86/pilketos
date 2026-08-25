@@ -78,6 +78,11 @@ export default function PengawasPage() {
       <header className="pt-2">
         <h1 className="text-lg font-bold">Panel Pengawas</h1>
         <p className="text-sm text-slate-500">Akses pantau saja -- tidak ada aksi yang bisa diubah dari halaman ini.</p>
+        <nav className="flex gap-3 text-sm text-blue-600 mt-2">
+          <a href="/admin/dpt" className="hover:underline">DPT</a>
+          <a href="/admin/kandidat" className="hover:underline">Kandidat</a>
+          <a href="/admin/bilik" className="hover:underline">Bilik</a>
+        </nav>
       </header>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
