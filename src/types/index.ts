@@ -1,7 +1,10 @@
 // Tipe bersama untuk seluruh koleksi MongoDB & payload API.
 // Mengikuti skema di Dokumen Teknis v4/v5/v6 dan User Stories v4.
 
-export type Peran = "admin" | "panitia" | "pemilih" | "kandidat";
+// "pengawas" -- panitia pengawas, akses read-only murni (rekonsiliasi,
+// pantauan bilik, checklist Go/No-Go) untuk pemisahan wewenang dari
+// "panitia" (panitia pemilihan) yang bisa ACC/scan/ubah data.
+export type Peran = "admin" | "panitia" | "pemilih" | "kandidat" | "pengawas";
 
 export type StatusFase =
   | "pendataan"

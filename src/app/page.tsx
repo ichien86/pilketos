@@ -9,6 +9,7 @@ const ROLE_HOME: Record<string, string> = {
   panitia: "/panitia/checkin",
   pemilih: "/pemilih",
   kandidat: "/kandidat/video",
+  pengawas: "/pengawas",
 };
 
 export default function LoginPage() {

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Mengikuti mode hari-H yang sedang aktif (simulasi atau pemilihan sungguhan).
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
 
   let mode;
   try {

@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 // hari-H yang aktif, jadi tidak cocok dipakai di sini.
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
 
   const modeParam = req.nextUrl.searchParams.get("mode");
   const mode: DbMode = modeParam === "simulasi" ? "simulasi" : "prod";

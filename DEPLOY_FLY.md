@@ -75,6 +75,19 @@ Lalu buat akun admin pertama:
 fly ssh console -C "npm run create-admin -- admin1 PasswordKuatAnda123"
 ```
 
+Untuk akun panitia (panitia pemilihan) dan pengawas (panitia pengawas,
+akses read-only -- lihat rekonsiliasi & pantauan bilik, tidak bisa
+ACC/scan/ubah data apa pun), pakai script terpisah:
+
+```bash
+fly ssh console -C "npm run create-staff -- panitia panitia1 PasswordKuat123"
+fly ssh console -C "npm run create-staff -- pengawas pengawas1 PasswordKuat456"
+```
+
+Jalankan perintah yang sama kapan saja untuk reset password akun yang sudah
+ada (kalau username-nya sudah dipakai akun dengan peran yang sama, script
+menimpa password-nya, bukan menolak).
+
 Jalankan perintah yang sama kapan saja untuk reset password admin yang sudah
 ada (kalau username-nya sudah dipakai akun admin, script ini menimpa
 password-nya, bukan menolak).

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // US-21 -- checklist Go/No-Go sebelum fase pemilihan dibuka.
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
-  if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
+  if (!requireRole(claims, ["admin", "panitia", "pengawas"])) return errorJson("Tidak diizinkan", 403);
   const db = await getDb("prod");
   const list = await db.collection<ChecklistItem>("checklist_gonogo").find({}).toArray();
   return NextResponse.json(list);
