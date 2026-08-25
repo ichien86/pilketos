@@ -7,6 +7,12 @@ interface QrScannerProps {
   active: boolean;
 }
 
+function formatCameraError(e: unknown): string {
+  const name = e instanceof DOMException ? e.name : null;
+  const msg = e instanceof Error ? e.message : String(e);
+  return name ? `${name}: ${msg}` : msg;
+}
+
 // Pembungkus html5-qrcode -- akses kamera browser di semua titik scan panitia
 // (identitas, exit) dan pemilih (QR bilik). Butuh HTTPS atau localhost
 // (kebijakan getUserMedia), lihat PRASYARAT_PENGEMBANGAN.md.
@@ -36,18 +42,29 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
         // kamera sama sekali, karena getUserMedia belum sempat dipanggil.
         const scanner = new Html5Qrcode(containerId.current);
         scannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
-            onResult(decodedText);
-          },
-          () => {
-            // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
-          }
-        );
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        const onSuccess = (decodedText: string) => onResult(decodedText);
+        const onDecodeError = () => {
+          // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
+        };
+        try {
+          // "ideal" (bukan "exact") -- lebih disukai kamera belakang, TAPI
+          // tetap boleh browser pilih kamera lain kalau tidak ada yang persis
+          // menandai dirinya "environment" (banyak laptop/webcam eksternal
+          // tidak melaporkan facingMode sama sekali).
+          await scanner.start({ facingMode: { ideal: "environment" } }, config, onSuccess, onDecodeError);
+        } catch (eEnvironment) {
+          // Fallback: kamera APA PUN yang tersedia -- device tanpa kamera
+          // belakang (laptop) tetap bisa dipakai, bukan gagal total. Ini
+          // penyebab paling umum "izin sudah diizinkan tapi tetap gagal":
+          // constraint facingMode tidak match kamera yang ada, BUKAN masalah
+          // izin sama sekali.
+          const cameras = await Html5Qrcode.getCameras().catch(() => []);
+          if (cameras.length === 0) throw eEnvironment;
+          await scanner.start(cameras[0].id, config, onSuccess, onDecodeError);
+        }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Gagal mengakses kamera");
+        setError(formatCameraError(e));
       }
     })();
 
