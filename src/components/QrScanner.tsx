@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 interface QrScannerProps {
   onResult: (text: string) => void;
@@ -17,7 +17,16 @@ function formatCameraError(e: unknown): string {
 // (identitas, exit) dan pemilih (QR bilik). Butuh HTTPS atau localhost
 // (kebijakan getUserMedia), lihat PRASYARAT_PENGEMBANGAN.md.
 export default function QrScanner({ onResult, active }: QrScannerProps) {
-  const containerId = useRef(`qr-scanner-${Math.random().toString(36).slice(2)}`);
+  // useId() (BUKAN Math.random()) -- komponen ini "use client" tapi TETAP
+  // di-server-render dulu oleh Next.js sebelum hydrate di browser. Math.random()
+  // menghasilkan nilai beda antara render server & client, jadi id div yang
+  // dicari lib ini saat efek jalan bisa tidak pernah cocok dengan yang ada di
+  // DOM ("HTML Element with id=... not found") -- useId() dijamin sama persis
+  // di server maupun client.
+  // useId() biasanya berbentuk ":r0:" -- titik dua dibuang supaya aman kalau
+  // ada kode (di sini atau di dalam html5-qrcode) yang memakainya sebagai
+  // selector CSS (mis. `#${id}`), bukan cuma getElementById biasa.
+  const containerId = `qr-scanner-${useId().replace(/:/g, "")}`;
   const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +49,7 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
         // ini luput, kegagalan jadi unhandled rejection: layar tetap kosong
         // (kotak hitam) TANPA pesan error dan TANPA browser sempat minta izin
         // kamera sama sekali, karena getUserMedia belum sempat dipanggil.
-        const scanner = new Html5Qrcode(containerId.current);
+        const scanner = new Html5Qrcode(containerId);
         scannerRef.current = scanner;
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         const onSuccess = (decodedText: string) => onResult(decodedText);
@@ -92,7 +101,7 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
   return (
     <div>
       <div
-        id={containerId.current}
+        id={containerId}
         className="relative w-full max-w-sm mx-auto aspect-square overflow-hidden rounded-lg border border-slate-300 bg-slate-900"
       >
         {error && (
