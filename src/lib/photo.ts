@@ -53,5 +53,5 @@ export async function processAndSavePhoto(file: File): Promise<string> {
   const filename = `${newId()}.png`;
   await writeFile(path.join(fotoDir, filename), avatarBuffer);
 
-  return `/uploads/foto/${filename}`;
+  return `/api/uploads/foto/${filename}`;
 }

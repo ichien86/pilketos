@@ -22,5 +22,5 @@ export async function saveUploadedVideo(file: File): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(videoDir, filename), buffer);
 
-  return `/uploads/video/${filename}`;
+  return `/api/uploads/video/${filename}`;
 }
