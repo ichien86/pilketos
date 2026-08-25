@@ -90,6 +90,7 @@ export default function SosialisasiPage() {
                   }}
                   src={v.url}
                   controls
+                  playsInline
                   className="w-full rounded-lg"
                   onEnded={() => onEnded(v._id)}
                 />

@@ -24,6 +24,7 @@ export default function PanitiaHomePage() {
           <NavItem href="/panitia/checkin" label="Check-in Pemilih" desc="Scan identitas & ACC masuk bilik" />
           <NavItem href="/panitia/bilik-monitor" label="Pantauan Bilik" desc="Status kosong/terisi real-time" />
           <NavItem href="/panitia/exit-scan" label="Scan Keluar" desc="Validasi barcode bukti sudah memilih" />
+          <NavItem href="/admin/rekonsiliasi" label="Rekonsiliasi" desc="Rekap agregat token, suara, dan status" />
         </div>
       </section>
     </main>

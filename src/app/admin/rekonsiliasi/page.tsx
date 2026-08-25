@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
+import { useRole } from "@/lib/use-role";
 
 interface Rekon {
   mode: string;
@@ -15,6 +16,7 @@ interface Rekon {
 
 // US-17 -- rekap agregat, tanpa membuka data mentah siapa pun.
 export default function RekonsiliasiPage() {
+  const role = useRole();
   const [mode, setMode] = useState<"prod" | "simulasi">("prod");
   const [data, setData] = useState<Rekon | null>(null);
 
@@ -26,7 +28,7 @@ export default function RekonsiliasiPage() {
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Rekonsiliasi</h1>
-        <a href="/admin/fase" className="text-sm text-blue-600 hover:underline">Kembali</a>
+        <a href={role === "admin" ? "/admin/fase" : role === "pengawas" ? "/pengawas" : "/panitia"} className="text-sm text-blue-600 hover:underline">Kembali</a>
       </header>
 
       <div className="flex gap-2">
