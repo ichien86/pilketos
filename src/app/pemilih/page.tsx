@@ -7,22 +7,60 @@ import DisplayQr from "@/components/DisplayQr";
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_LABEL: Record<string, string> = {
-  belum_checkin: "Belum check-in -- tunjukkan barcode di bawah ke panitia pendaftaran",
+  belum_checkin: "Tunjukkan barcode ini ke panitia pendaftaran untuk check-in",
   menunggu: "Sudah di-ACC panitia -- menunggu giliran bilik kosong",
   di_bilik: "Sedang di bilik -- lanjutkan ke layar pemilihan",
   sudah_memilih: "Suara Anda sudah tercatat -- tunjukkan barcode bukti ke panitia pintu keluar",
   selesai: "Selesai -- terima kasih sudah memilih",
-  kedaluwarsa: "Sesi kedaluwarsa -- silakan ulangi check-in dari awal",
+  kedaluwarsa: "Sesi kedaluwarsa -- silakan check-in ulang lewat barcode di bawah",
 };
 
+const FASE_LABEL: Record<string, string> = {
+  pendataan: "Pendataan",
+  pendaftaran_calon: "Pendaftaran Calon",
+  sosialisasi: "Sosialisasi",
+  simulasi: "Simulasi (Gladi Bersih)",
+  pemilihan: "Pemilihan (Hari-H)",
+};
+
+interface Fase {
+  nama_fase: string;
+  status: "belum_dibuka" | "aktif" | "ditutup";
+}
+
+// Dashboard tunggal yang menyesuaikan diri ke tahapan yang sedang berjalan --
+// pemilih tidak perlu memilih menu sendiri. Sosialisasi aktif -> alihkan ke
+// materi kampanye. Simulasi/pemilihan aktif -> ikuti status sesi hari-H
+// (barcode identitas -> bilik -> bukti), persis alur lama, cuma sekarang
+// tidak muncul kalau bukan waktunya. Fase lain -> tidak ada tugas, tampilkan
+// status tahap saja.
 export default function PemilihHomePage() {
   const router = useRouter();
+  const [faseAktif, setFaseAktif] = useState<string | null | undefined>(undefined);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("belum_checkin");
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
+    let cancelled = false;
+    apiFetch<Fase[]>("/api/fase").then((all) => {
+      if (cancelled) return;
+      setFaseAktif(all.find((f) => f.status === "aktif")?.nama_fase ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (faseAktif === "sosialisasi") router.replace("/pemilih/sosialisasi");
+  }, [faseAktif, router]);
+
+  const hariH = faseAktif === "simulasi" || faseAktif === "pemilihan";
+
+  useEffect(() => {
+    if (!hariH) return;
     let cancelled = false;
     async function refreshBarcode() {
       try {
@@ -38,9 +76,10 @@ export default function PemilihHomePage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [hariH]);
 
   useEffect(() => {
+    if (!hariH) return;
     let cancelled = false;
     async function poll() {
       try {
@@ -69,29 +108,46 @@ export default function PemilihHomePage() {
       clearInterval(pollingRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hariH]);
+
+  if (faseAktif === undefined) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <p className="text-sm text-slate-400">Memuat...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
-        <h1 className="text-lg font-bold">Check-in Pemilih</h1>
-        <nav className="flex gap-3 text-sm text-blue-600">
-          <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>
-          <a href="/pemilih/profil" className="hover:underline">Profil</a>
+        <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
+        <nav className="flex items-center gap-3 text-sm text-blue-600">
+          {!hariH && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
+          {!hariH && <a href="/pemilih/profil" className="hover:underline">Profil</a>}
           <LogoutButton />
         </nav>
       </header>
 
-      <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
-        <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
-        {status === "belum_checkin" && qrPayload && (
-          <>
-            <DisplayQr payload={qrPayload} />
-            <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
-          </>
-        )}
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-      </div>
+      {hariH ? (
+        <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+          <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
+          {(status === "belum_checkin" || status === "kedaluwarsa") && qrPayload && (
+            <>
+              <DisplayQr payload={qrPayload} />
+              <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
+            </>
+          )}
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow p-6 text-center space-y-2">
+          <p className="text-slate-700 font-medium">Belum ada yang perlu dilakukan saat ini.</p>
+          <p className="text-sm text-slate-500">
+            {faseAktif ? `Tahap saat ini: ${FASE_LABEL[faseAktif] ?? faseAktif}.` : "Menunggu panitia membuka tahap berikutnya."}
+          </p>
+        </div>
+      )}
     </main>
   );
 }

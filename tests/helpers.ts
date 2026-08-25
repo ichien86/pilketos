@@ -17,6 +17,8 @@ export async function seedFaseAktifPemilihan() {
       dibuka_at: nama === "pemilihan" ? now : now,
       ditutup_at: nama === "pemilihan" ? null : now,
       kandidat_terkunci: nama === "sosialisasi" ? [] : null,
+      hasil_diumumkan: false,
+      hasil_diumumkan_at: null,
     }))
   );
 }

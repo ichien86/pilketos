@@ -95,7 +95,18 @@ export async function POST(
   } else {
     await db.collection<KontrolFase>("kontrol_fase").updateOne(
       { nama_fase: nama },
-      { $set: { nama_fase: nama, status: "aktif", dibuka_at: now, ditutup_at: null } },
+      {
+        $set: {
+          nama_fase: nama,
+          status: "aktif",
+          dibuka_at: now,
+          ditutup_at: null,
+          // Reopen darurat pemilihan (isReopen) berarti voting berjalan lagi --
+          // hasil yang sudah terlanjur diumumkan HARUS dicabut otomatis supaya
+          // pemilih tidak melihat angka yang sudah tidak final.
+          ...(nama === "pemilihan" ? { hasil_diumumkan: false, hasil_diumumkan_at: null } : {}),
+        },
+      },
       { upsert: true }
     );
   }

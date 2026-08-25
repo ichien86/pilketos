@@ -111,6 +111,8 @@ export async function seedSimulasi(): Promise<void> {
     dibuka_at: now,
     ditutup_at: now,
     kandidat_terkunci: kandidatDocs.map((k) => k._id),
+    hasil_diumumkan: false,
+    hasil_diumumkan_at: null,
   };
 
   if (pemilihDocs.length) await db.collection<PemilihDpt>("pemilih_dpt").insertMany(pemilihDocs);

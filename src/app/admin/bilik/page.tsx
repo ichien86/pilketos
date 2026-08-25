@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
 import { useRole } from "@/lib/use-role";
+import PanitiaNav from "@/components/PanitiaNav";
 
 interface Bilik {
   _id: string;
@@ -53,9 +54,13 @@ export default function AdminBilikPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-6">
-      <header className="flex items-center justify-between pt-2">
+      <header className={role === "panitia" ? "space-y-2 pt-2" : "flex items-center justify-between pt-2"}>
         <h1 className="text-lg font-bold">Konfigurasi Bilik</h1>
-        <a href={role === "admin" ? "/admin/fase" : role === "pengawas" ? "/pengawas" : "/panitia"} className="text-sm text-blue-600 hover:underline">Kembali</a>
+        {role === "panitia" ? (
+          <PanitiaNav active="/admin/bilik" />
+        ) : (
+          <a href={role === "admin" ? "/admin/fase" : "/pengawas"} className="text-sm text-blue-600 hover:underline">Kembali</a>
+        )}
       </header>
 
       {isPengawas && (

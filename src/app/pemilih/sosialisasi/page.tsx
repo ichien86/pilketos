@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import MisiList from "@/components/MisiList";
+import LogoutButton from "@/components/LogoutButton";
 
 interface Kandidat {
   _id: string;
@@ -30,17 +31,20 @@ export default function SosialisasiPage() {
   const [kandidat, setKandidat] = useState<Kandidat[]>([]);
   const [video, setVideo] = useState<Video[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [sosialisasiAktif, setSosialisasiAktif] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   async function refresh() {
-    const [k, v, p] = await Promise.all([
+    const [k, v, p, fase] = await Promise.all([
       apiFetch<Kandidat[]>("/api/kandidat"),
       apiFetch<Video[]>("/api/video"),
       apiFetch<Progress>("/api/progress"),
+      apiFetch<Array<{ nama_fase: string; status: string }>>("/api/fase"),
     ]);
     setKandidat(k);
     setVideo(v);
     setProgress(p);
+    setSosialisasiAktif(fase.some((f) => f.nama_fase === "sosialisasi" && f.status === "aktif"));
   }
 
   useEffect(() => {
@@ -56,7 +60,11 @@ export default function SosialisasiPage() {
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Sosialisasi Kandidat</h1>
-        <a href="/pemilih" className="text-sm text-blue-600 hover:underline">Kembali</a>
+        {sosialisasiAktif ? (
+          <LogoutButton />
+        ) : (
+          <a href="/pemilih" className="text-sm text-blue-600 hover:underline">Kembali</a>
+        )}
       </header>
 
       {progress && (

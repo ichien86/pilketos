@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import QrScanner from "@/components/QrScanner";
-import LogoutButton from "@/components/LogoutButton";
+import PanitiaNav from "@/components/PanitiaNav";
 
 // US-16 -- scan barcode bukti di meja keluar, sekali pakai.
 export default function ExitScanPage() {
@@ -31,12 +31,9 @@ export default function ExitScanPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
-      <header className="flex items-center justify-between pt-2">
+      <header className="space-y-2 pt-2">
         <h1 className="text-lg font-bold">Scan Bukti Pintu Keluar</h1>
-        <nav className="flex items-center gap-3 text-sm">
-          <a href="/panitia" className="text-blue-600 hover:underline">Panel</a>
-          <LogoutButton />
-        </nav>
+        <PanitiaNav active="/panitia/exit-scan" />
       </header>
       {scanning && (
         <div className="bg-white rounded-xl shadow p-4 space-y-3">

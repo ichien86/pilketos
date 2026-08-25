@@ -29,6 +29,8 @@ export async function getAllFase(): Promise<KontrolFase[]> {
         dibuka_at: null,
         ditutup_at: null,
         kandidat_terkunci: null,
+        hasil_diumumkan: false,
+        hasil_diumumkan_at: null,
       }
   );
 }

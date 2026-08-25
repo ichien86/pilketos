@@ -19,10 +19,17 @@ async function main() {
     dibuka_at: null,
     ditutup_at: null,
     kandidat_terkunci: null,
+    hasil_diumumkan: false,
+    hasil_diumumkan_at: null,
   }));
   if (toInsert.length > 0) {
     await db.collection<KontrolFase>("kontrol_fase").insertMany(toInsert);
   }
+  // Backfill untuk dokumen lama (dibuat sebelum field hasil_diumumkan ada).
+  await db.collection<KontrolFase>("kontrol_fase").updateMany(
+    { hasil_diumumkan: { $exists: false } },
+    { $set: { hasil_diumumkan: false, hasil_diumumkan_at: null } }
+  );
 
   console.log("Setup selesai: index + checklist Go/No-Go + 5 dokumen fase (pendataan..pemilihan) siap.");
   process.exit(0);

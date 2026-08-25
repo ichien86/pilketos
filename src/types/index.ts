@@ -93,6 +93,11 @@ export interface KontrolFase {
   dibuka_at: Date | null;
   ditutup_at: Date | null;
   kandidat_terkunci: string[] | null; // snapshot saat sosialisasi dibuka
+  // Hanya bermakna untuk nama_fase "pemilihan" -- gerbang terpisah dari
+  // status fase sendiri supaya admin bisa tutup pemilihan dulu (hentikan
+  // voting), verifikasi rekonsiliasi, BARU umumkan ke pemilih kapan siap.
+  hasil_diumumkan: boolean;
+  hasil_diumumkan_at: Date | null;
 }
 
 export interface SesiPemilih {
