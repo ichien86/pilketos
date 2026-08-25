@@ -85,6 +85,7 @@ export default function AdminFasePage() {
           <a href="/admin/kandidat" className="hover:underline">Kandidat</a>
           <a href="/admin/bilik" className="hover:underline">Bilik</a>
           <a href="/admin/rekonsiliasi" className="hover:underline">Rekonsiliasi</a>
+          <a href="/admin/panitia" className="hover:underline">Panitia</a>
         </nav>
       </header>
 

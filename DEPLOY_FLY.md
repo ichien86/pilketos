@@ -77,7 +77,14 @@ fly ssh console -C "npm run create-admin -- admin1 PasswordKuatAnda123"
 
 Untuk akun panitia (panitia pemilihan) dan pengawas (panitia pengawas,
 akses read-only -- lihat rekonsiliasi & pantauan bilik, tidak bisa
-ACC/scan/ubah data apa pun), pakai script terpisah:
+ACC/scan/ubah data apa pun), admin yang sudah login bisa kelola sendiri
+lewat `/admin/panitia` (tambah akun baru, reset password, hapus) --
+password awal semua akun baru sama (`panitiapilketosman3`, atau nilai env
+`STAFF_DEFAULT_PASSWORD` kalau di-set), setiap orang wajib menggantinya
+sendiri di login pertama.
+
+Script CLI di server hanya perlu dipakai kalau butuh akses langsung tanpa
+lewat browser (mis. tidak ada admin yang bisa login):
 
 ```bash
 fly ssh console -C "npm run create-staff -- panitia panitia1 PasswordKuat123"
