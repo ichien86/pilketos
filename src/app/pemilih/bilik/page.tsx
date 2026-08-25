@@ -83,7 +83,7 @@ export default function BilikPage() {
       {mode === "scan_bilik" && (
         <div className="bg-white rounded-xl shadow p-4 space-y-3">
           <p className="text-sm text-slate-600">Scan QR yang tertempel di bilik untuk memulai.</p>
-          <QrScanner active onResult={handleScanBilik} />
+          <QrScanner active onResult={handleScanBilik} wajibKameraBelakang />
         </div>
       )}
 
