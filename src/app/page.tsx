@@ -53,7 +53,7 @@ export default function LoginPage() {
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium block mb-1">Username (NIS/NIP?NIK)</label>
+            <label className="text-sm font-medium block mb-1">Username (NIS/NIP/NIK)</label>
             <input
               className="w-full border rounded-lg px-3 py-2"
               value={username}
