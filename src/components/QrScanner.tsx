@@ -20,11 +20,22 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
     let cancelled = false;
 
     (async () => {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      if (cancelled) return;
-      const scanner = new Html5Qrcode(containerId.current);
-      scannerRef.current = scanner;
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(
+            "Browser ini tidak mendukung akses kamera (atau halaman tidak dibuka lewat HTTPS) -- coba buka lewat browser biasa (Chrome/Safari), bukan lewat aplikasi lain."
+          );
+        }
+        const { Html5Qrcode } = await import("html5-qrcode");
+        if (cancelled) return;
+        // Konstruktor Html5Qrcode SENDIRI bisa throw (bukan cuma .start()), mis.
+        // kalau browser/webview tidak benar-benar mendukung MediaDevices --
+        // makanya ini ikut di dalam try, bukan cuma .start() di bawah. Kalau
+        // ini luput, kegagalan jadi unhandled rejection: layar tetap kosong
+        // (kotak hitam) TANPA pesan error dan TANPA browser sempat minta izin
+        // kamera sama sekali, karena getUserMedia belum sempat dipanggil.
+        const scanner = new Html5Qrcode(containerId.current);
+        scannerRef.current = scanner;
         await scanner.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -66,8 +77,18 @@ export default function QrScanner({ onResult, active }: QrScannerProps) {
       <div
         id={containerId.current}
         className="relative w-full max-w-sm mx-auto aspect-square overflow-hidden rounded-lg border border-slate-300 bg-slate-900"
-      />
-      {error && <p className="text-red-600 text-sm mt-2">Kamera error: {error}</p>}
+      >
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="text-red-600 text-xs mt-2">
+          Kalau ini muncul terus, cek izin kamera untuk situs ini di pengaturan browser (biasanya lewat ikon gembok/kamera di sebelah alamat situs).
+        </p>
+      )}
     </div>
   );
 }
