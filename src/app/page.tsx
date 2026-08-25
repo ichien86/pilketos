@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 
 const ROLE_HOME: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-xl shadow p-6 space-y-4">
         <div className="text-center space-y-1">
+          <Image src="/logo-man3.png" alt="Logo OSIM MAN 3 Boyolali" width={88} height={90} className="mx-auto mb-1" priority />
           <h1 className="text-lg font-bold">E-Voting OSIM</h1>
           <p className="text-sm text-slate-500">MAN 3 Boyolali</p>
         </div>
