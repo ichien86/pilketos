@@ -20,8 +20,18 @@ function getUri(): string {
 
 function getClientPromise(): Promise<MongoClient> {
   if (!global.__mongoClientPromise) {
-    const client = new MongoClient(getUri());
-    global.__mongoClientPromise = client.connect();
+    const client = new MongoClient(getUri(), { maxPoolSize: 10 });
+    const promise = client.connect();
+    // Kalau percobaan koneksi pertama gagal (mis. network access Atlas belum
+    // terbuka, blip jaringan sesaat), JANGAN cache promise yang reject --
+    // tanpa ini, semua request berikutnya akan langsung gagal dengan error
+    // yang sama sampai proses di-restart manual, walau masalahnya sudah beres.
+    promise.catch(() => {
+      if (global.__mongoClientPromise === promise) {
+        global.__mongoClientPromise = undefined;
+      }
+    });
+    global.__mongoClientPromise = promise;
   }
   return global.__mongoClientPromise;
 }

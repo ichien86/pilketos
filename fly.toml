@@ -2,7 +2,7 @@
 # Arsitektur TIDAK diubah dari versi lokal: satu image, dua process group --
 # "app" (server Next.js, `npm run start`) dan "cron" (`npm run cron`, sweep
 # TTL tiap 30 detik persis seperti scripts/cron-sweep.ts di lingkungan dev).
-app = "pilketos"
+app = "pilketos-man3boyolali"
 primary_region = "sin" # Singapore -- latensi terdekat ke Indonesia
 
 [build]
