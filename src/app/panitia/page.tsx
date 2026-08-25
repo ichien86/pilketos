@@ -1,3 +1,5 @@
+import LogoutButton from "@/components/LogoutButton";
+
 // Beranda panitia pemilihan -- mengelola data DPT/kandidat/bilik (persiapan)
 // + alat hari-H (check-in, pantauan bilik, scan keluar). Admin sengaja tidak
 // lagi menonjolkan menu-menu ini di /admin/fase supaya fokus ke kontrol
@@ -5,8 +7,9 @@
 export default function PanitiaHomePage() {
   return (
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-6">
-      <header className="pt-2">
+      <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Panel Panitia Pemilihan</h1>
+        <LogoutButton />
       </header>
 
       <section className="space-y-2">

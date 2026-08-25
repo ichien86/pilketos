@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
+import LogoutButton from "@/components/LogoutButton";
 
 interface Fase {
   nama_fase: string;
@@ -83,6 +84,7 @@ export default function AdminFasePage() {
         <nav className="flex gap-3 text-sm text-blue-600">
           <a href="/admin/panitia" className="hover:underline">Panitia</a>
           <a href="/admin/rekonsiliasi" className="hover:underline">Rekonsiliasi</a>
+          <LogoutButton />
         </nav>
       </header>
 

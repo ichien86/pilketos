@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import QrScanner from "@/components/QrScanner";
 import DisplayQr from "@/components/DisplayQr";
+import LogoutButton from "@/components/LogoutButton";
 
 interface ScanResult {
   nama: string;
@@ -64,7 +65,11 @@ export default function PanitiaCheckinPage() {
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Check-in Pendaftaran</h1>
-        <a href="/panitia/bilik-monitor" className="text-sm text-blue-600 hover:underline">Pantauan Bilik</a>
+        <nav className="flex items-center gap-3 text-sm">
+          <a href="/panitia" className="text-blue-600 hover:underline">Panel</a>
+          <a href="/panitia/bilik-monitor" className="text-blue-600 hover:underline">Pantauan Bilik</a>
+          <LogoutButton />
+        </nav>
       </header>
 
       {scanning && (

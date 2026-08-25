@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
+import LogoutButton from "@/components/LogoutButton";
 
 interface Video {
   _id: string;
@@ -55,7 +56,10 @@ export default function KandidatVideoPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-lg mx-auto space-y-6">
-      <h1 className="text-lg font-bold pt-2">Video Kampanye</h1>
+      <header className="flex items-center justify-between pt-2">
+        <h1 className="text-lg font-bold">Video Kampanye</h1>
+        <LogoutButton />
+      </header>
 
       <form onSubmit={upload} className="bg-white rounded-xl shadow p-4 space-y-3">
         <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
+import LogoutButton from "@/components/LogoutButton";
 
 interface Bilik {
   _id: string;
@@ -41,7 +42,11 @@ export default function BilikMonitorPage() {
     <main className="min-h-screen p-4 max-w-2xl mx-auto space-y-4">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Pantauan Bilik {mode && `(${mode})`}</h1>
-        <a href="/panitia/checkin" className="text-sm text-blue-600 hover:underline">Check-in</a>
+        <nav className="flex items-center gap-3 text-sm">
+          <a href="/panitia" className="text-blue-600 hover:underline">Panel</a>
+          <a href="/panitia/checkin" className="text-blue-600 hover:underline">Check-in</a>
+          <LogoutButton />
+        </nav>
       </header>
       {error && <p className="text-red-600 text-sm">{error}</p>}
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">

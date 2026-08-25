@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
+import LogoutButton from "@/components/LogoutButton";
 
 interface Fase {
   nama_fase: string;
@@ -76,7 +77,10 @@ export default function PengawasPage() {
   return (
     <main className="min-h-screen p-4 max-w-3xl mx-auto space-y-6">
       <header className="pt-2">
-        <h1 className="text-lg font-bold">Panel Pengawas</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold">Panel Pengawas</h1>
+          <LogoutButton />
+        </div>
         <p className="text-sm text-slate-500">Akses pantau saja -- tidak ada aksi yang bisa diubah dari halaman ini.</p>
         <nav className="flex gap-3 text-sm text-blue-600 mt-2">
           <a href="/admin/dpt" className="hover:underline">DPT</a>

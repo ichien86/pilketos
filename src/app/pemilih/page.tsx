@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
+import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_LABEL: Record<string, string> = {
   belum_checkin: "Belum check-in -- tunjukkan barcode di bawah ke panitia pendaftaran",
@@ -77,6 +78,7 @@ export default function PemilihHomePage() {
         <nav className="flex gap-3 text-sm text-blue-600">
           <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>
           <a href="/pemilih/profil" className="hover:underline">Profil</a>
+          <LogoutButton />
         </nav>
       </header>
 
