@@ -4,6 +4,7 @@ import { POST as klaimBilik } from "@/app/api/vote/klaim-bilik/route";
 import { POST as submitVote } from "@/app/api/vote/[token]/submit/route";
 import { POST as exitScan } from "@/app/api/panitia/exit-scan/route";
 import { GET as rekonsiliasi } from "@/app/api/admin/rekonsiliasi/route";
+import { GET as daftarToken } from "@/app/api/admin/rekonsiliasi/daftar-token/route";
 import { generateVoteToken, hashToken } from "@/lib/voteToken";
 import { getDb } from "@/lib/db";
 import { signSession } from "@/lib/auth";
@@ -90,5 +91,22 @@ describe("submit vote atomik + rekonsiliasi (US-14, US-16, US-17)", () => {
     expect(rekon.total_suara).toBe(1);
     expect(rekon.total_scan_keluar).toBe(1);
     expect(rekon.perlu_investigasi).toBe(false);
+
+    const daftarRes = await daftarToken(
+      new NextRequest("http://localhost/api/admin/rekonsiliasi/daftar-token?mode=prod", {
+        headers: { cookie: panitiaCookie() },
+      })
+    );
+    const daftarBody = await daftarRes.json();
+    expect(daftarBody.daftar).toHaveLength(1);
+    const baris = daftarBody.daftar[0];
+    expect(baris.nama).toBe(pemilih.nama);
+    expect(baris.nis_nip).toBe(pemilih.nis_nip);
+    expect(baris.status).toBe("selesai");
+    expect(baris.sudah_scan_keluar).toBe(true);
+    // Tidak pernah menyertakan kredensial token atau pilihan suaranya.
+    expect(baris).not.toHaveProperty("token_hash");
+    expect(baris).not.toHaveProperty("kandidat_dipilih_nomor");
+    expect(baris).not.toHaveProperty("barcode_bukti_plain");
   });
 });
