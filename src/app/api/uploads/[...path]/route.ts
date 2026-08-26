@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import path from "path";
+import { resolveUploadBaseDir } from "@/lib/upload-path";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: { path: strin
     return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
   }
 
-  const uploadDir = process.env.UPLOAD_DIR ?? "./public/uploads";
-  const baseDir = path.join(process.cwd(), uploadDir.replace(/^\.\//, ""));
+  const baseDir = resolveUploadBaseDir();
   const filePath = path.join(baseDir, ...segments);
 
   if (!filePath.startsWith(baseDir + path.sep)) {

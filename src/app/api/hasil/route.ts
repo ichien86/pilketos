@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import type { Kandidat, Suara } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -10,17 +10,19 @@ export const dynamic = "force-dynamic";
 // Hasil untuk pemilih (bukan admin/panitia) -- cuma tampil kalau admin
 // sudah eksplisit umumkan (lihat /api/fase/pemilihan/umumkan-hasil), dan
 // cuma tally per-paslon, TANPA angka rekonsiliasi internal (token terbit,
-// dll -- itu tetap khusus /api/admin/rekonsiliasi).
+// dll -- itu tetap khusus /api/admin/rekonsiliasi). Mode-aware supaya
+// pemilih uji coba melihat hasil sandbox-nya sendiri, bukan hasil produksi.
 export async function GET(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!claims) return errorJson("Tidak diizinkan", 401);
 
+  const mode = await resolveAppMode();
   const fase = await getFase("pemilihan");
   if (!fase.hasil_diumumkan) {
     return NextResponse.json({ diumumkan: false });
   }
 
-  const db = await getDb("prod");
+  const db = await getDb(mode);
   const [perPaslonAgg, kandidatList] = await Promise.all([
     db
       .collection<Suara>("suara")

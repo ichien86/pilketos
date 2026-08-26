@@ -5,11 +5,13 @@ import { POST as tutupFase } from "@/app/api/fase/[nama]/tutup/route";
 import { POST as tambahDpt, GET as listDpt } from "@/app/api/dpt/route";
 import { POST as tambahKandidat } from "@/app/api/kandidat/route";
 import { GET as getModeUjiCoba, POST as setModeUjiCoba } from "@/app/api/mode/uji-coba/route";
+import { POST as umumkanHasil } from "@/app/api/fase/pemilihan/umumkan-hasil/route";
+import { GET as getHasil } from "@/app/api/hasil/route";
 import { signSession } from "@/lib/auth";
 import { newId } from "@/lib/id";
 import { resolveAppMode } from "@/lib/mode";
 import { getDb } from "@/lib/db";
-import type { PemilihDpt, Kandidat } from "@/types";
+import type { PemilihDpt, Kandidat, KontrolFase } from "@/types";
 
 function adminCookie(): string {
   const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "admin", username: "admin1" });
@@ -154,5 +156,61 @@ describe("mode uji coba (flag global, bukan fase tersendiri)", () => {
     const listRes = await listDpt(dptListReq());
     const daftar = await listRes.json();
     expect(daftar.some((p: { nis_nip: string }) => p.nis_nip === "UJI001")).toBe(false);
+  });
+
+  it("menolak menyalakan uji coba kalau ada fase produksi yang sedang aktif", async () => {
+    // Buka pendataan SUNGGUHAN (mode masih prod di sini).
+    const bukaProd = await buka("pendataan");
+    expect(bukaProd.status).toBe(200);
+
+    const res = await setModeUjiCoba(modeReq(true));
+    expect(res.status).toBe(409);
+    expect(await resolveAppMode()).toBe("prod");
+  });
+
+  it("umumkan hasil menulis ke database mode yang aktif -- TIDAK diam-diam menandai hasil produksi", async () => {
+    // Pastikan prod SUDAH punya dokumen fase "pemilihan" (hasil_diumumkan:
+    // false) sebelum uji coba dinyalakan -- kalau tidak ada dokumen sama
+    // sekali, assert di bawah bisa lolos secara kebetulan, bukan karena
+    // fix-nya benar-benar bekerja.
+    const prodDbSetup = await getDb("prod");
+    await prodDbSetup.collection<KontrolFase>("kontrol_fase").updateOne(
+      { nama_fase: "pemilihan" },
+      { $set: { nama_fase: "pemilihan", hasil_diumumkan: false, hasil_diumumkan_at: null } },
+      { upsert: true }
+    );
+
+    await setModeUjiCoba(modeReq(true));
+
+    // Suntik langsung status "pemilihan: ditutup" di sandbox (jalan pintas
+    // dari alur buka/tutup penuh yang sudah diuji di tempat lain) supaya
+    // fokus tes ini murni pada konsistensi mode saat umumkan-hasil.
+    const sandboxDb = await getDb("simulasi");
+    await sandboxDb.collection<KontrolFase>("kontrol_fase").updateOne(
+      { nama_fase: "pemilihan" },
+      { $set: { status: "ditutup" } }
+    );
+
+    const res = await umumkanHasil(
+      new NextRequest("http://localhost/api/fase/pemilihan/umumkan-hasil", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: adminCookie() },
+        body: JSON.stringify({ umumkan: true }),
+      })
+    );
+    expect(res.status).toBe(200);
+
+    const sandboxFase = await sandboxDb.collection<KontrolFase>("kontrol_fase").findOne({ nama_fase: "pemilihan" });
+    expect(sandboxFase?.hasil_diumumkan).toBe(true);
+
+    const prodDb = await getDb("prod");
+    const prodFase = await prodDb.collection<KontrolFase>("kontrol_fase").findOne({ nama_fase: "pemilihan" });
+    expect(prodFase?.hasil_diumumkan ?? false).toBe(false);
+
+    const hasilRes = await getHasil(
+      new NextRequest("http://localhost/api/hasil", { headers: { cookie: adminCookie() } })
+    );
+    const hasilBody = await hasilRes.json();
+    expect(hasilBody.diumumkan).toBe(true);
   });
 });

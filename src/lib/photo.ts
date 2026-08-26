@@ -3,6 +3,7 @@ import path from "path";
 import sharp from "sharp";
 import { removeBackground } from "@imgly/background-removal-node";
 import { newId } from "@/lib/id";
+import { resolveUploadBaseDir } from "@/lib/upload-path";
 
 const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB, cukup longgar untuk foto kamera HP
@@ -46,8 +47,7 @@ export async function processAndSavePhoto(file: File): Promise<string> {
     .png()
     .toBuffer();
 
-  const uploadDir = process.env.UPLOAD_DIR ?? "./public/uploads";
-  const fotoDir = path.join(process.cwd(), uploadDir.replace(/^\.\//, ""), "foto");
+  const fotoDir = path.join(resolveUploadBaseDir(), "foto");
   await mkdir(fotoDir, { recursive: true });
 
   const filename = `${newId()}.png`;

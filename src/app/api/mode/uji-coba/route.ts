@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { isUjiCobaAktif, aktifkanUjiCoba, matikanUjiCoba } from "@/lib/mode";
+import { isUjiCobaAktif, aktifkanUjiCoba, matikanUjiCoba, ModeGateError } from "@/lib/mode";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +23,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const aktif = body?.aktif === true;
 
-  if (aktif) {
-    await aktifkanUjiCoba();
-  } else {
-    await matikanUjiCoba();
+  try {
+    if (aktif) {
+      await aktifkanUjiCoba();
+    } else {
+      await matikanUjiCoba();
+    }
+  } catch (e) {
+    if (e instanceof ModeGateError) return errorJson(e.message, 409);
+    throw e;
   }
 
   return NextResponse.json({ aktif });

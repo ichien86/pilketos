@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { newId } from "@/lib/id";
+import { resolveUploadBaseDir } from "@/lib/upload-path";
 
 const ALLOWED_VIDEO_EXT = new Set([".mp4", ".webm", ".mov", ".m4v"]);
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB, cukup untuk video kampanye singkat
@@ -14,8 +15,7 @@ export async function saveUploadedVideo(file: File): Promise<string> {
     throw new Error("Ukuran video melebihi batas 200MB");
   }
 
-  const uploadDir = process.env.UPLOAD_DIR ?? "./public/uploads";
-  const videoDir = path.join(process.cwd(), uploadDir.replace(/^\.\//, ""), "video");
+  const videoDir = path.join(resolveUploadBaseDir(), "video");
   await mkdir(videoDir, { recursive: true });
 
   const filename = `${newId()}${ext}`;

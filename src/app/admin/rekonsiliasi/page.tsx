@@ -72,9 +72,14 @@ export default function RekonsiliasiPage() {
         <button onClick={() => setMode("simulasi")} className={`flex-1 rounded-lg py-2 ${mode === "simulasi" ? "bg-slate-900 text-white" : "border"}`}>Simulasi</button>
       </div>
 
-      {isAdmin && mode === "prod" && fasePemilihan && (
+      {isAdmin && fasePemilihan && (
         <div className="bg-white rounded-xl shadow p-4 space-y-2">
-          <h2 className="font-bold">Pengumuman Hasil ke Pemilih</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold">Pengumuman Hasil ke Pemilih</h2>
+            <span className="text-xs text-slate-400">
+              Berlaku untuk fase Pemilihan yang sedang aktif saat ini -- lihat pita &quot;MODE UJI COBA&quot; di atas kalau ada.
+            </span>
+          </div>
           {fasePemilihan.hasil_diumumkan ? (
             <>
               <p className="text-sm text-emerald-700">Hasil SUDAH diumumkan -- dashboard pemilih menampilkan perolehan suara.</p>
