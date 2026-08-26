@@ -11,7 +11,7 @@ import { signSession } from "@/lib/auth";
 import { newId } from "@/lib/id";
 import { resolveAppMode } from "@/lib/mode";
 import { getDb } from "@/lib/db";
-import type { PemilihDpt, Kandidat, KontrolFase } from "@/types";
+import type { PemilihDpt, Kandidat, KontrolFase, VideoKampanye } from "@/types";
 
 function adminCookie(): string {
   const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "admin", username: "admin1" });
@@ -143,7 +143,12 @@ describe("mode uji coba (flag global, bukan fase tersendiri)", () => {
     await setModeUjiCoba(modeReq(true));
     await buka("pendataan");
     await tambahDpt(dptTambahReq());
-    await tutup("pendataan");
+    // Aktivasi langsung lewat DB (bukan lewat /api/akun/aktivasi) -- cukup
+    // untuk memenuhi gerbang tutup pendataan di bawah, fokus tes ini bukan
+    // alur aktivasi itu sendiri (sudah diuji di tempat lain).
+    await (await getDb("simulasi")).collection("akun_pengguna").updateOne({ username: "UJI001" }, { $set: { aktivasi_selesai: true } });
+    const tutupRes = await tutup("pendataan");
+    expect(tutupRes.status).toBe(200);
 
     await setModeUjiCoba(modeReq(false));
 
@@ -212,5 +217,66 @@ describe("mode uji coba (flag global, bukan fase tersendiri)", () => {
     );
     const hasilBody = await hasilRes.json();
     expect(hasilBody.diumumkan).toBe(true);
+  });
+
+  it("pendataan tidak bisa ditutup kalau masih ada pemilih yang belum aktivasi", async () => {
+    await setModeUjiCoba(modeReq(true));
+    await buka("pendataan");
+    await tambahDpt(dptTambahReq());
+
+    const ditolak = await tutup("pendataan");
+    expect(ditolak.status).toBe(409);
+    const body = await ditolak.json();
+    expect(body.error).toMatch(/belum mengaktivasi/);
+
+    await (await getDb("simulasi")).collection("akun_pengguna").updateOne({ username: "UJI001" }, { $set: { aktivasi_selesai: true } });
+    const berhasil = await tutup("pendataan");
+    expect(berhasil.status).toBe(200);
+  });
+
+  it("sosialisasi tidak bisa ditutup kalau masih ada pemilih yang belum nonton semua video wajib", async () => {
+    await setModeUjiCoba(modeReq(true));
+    await buka("pendataan");
+    const dptRes = await tambahDpt(dptTambahReq());
+    const pemilih = await dptRes.json();
+
+    const sandboxDb = await getDb("simulasi");
+    await sandboxDb.collection("akun_pengguna").updateOne({ username: "UJI001" }, { $set: { aktivasi_selesai: true } });
+    await tutup("pendataan");
+    await buka("pendaftaran_calon");
+
+    const kandidat1Id = newId();
+    const kandidat2Id = newId();
+    const now = new Date();
+    await sandboxDb.collection<Kandidat>("kandidat").insertMany([
+      { _id: kandidat1Id, nomor_urut: 1, nama_ketua: "A", nama_wakil: "B", foto_ketua: "x", foto_wakil: "x", visi: "v", misi: "m", status: "aktif", dibatalkan_at: null, created_at: now, updated_at: now },
+      { _id: kandidat2Id, nomor_urut: 2, nama_ketua: "C", nama_wakil: "D", foto_ketua: "x", foto_wakil: "x", visi: "v", misi: "m", status: "aktif", dibatalkan_at: null, created_at: now, updated_at: now },
+    ]);
+    await tutup("pendaftaran_calon");
+    const bukaSosRes = await buka("sosialisasi");
+    expect(bukaSosRes.status).toBe(200);
+
+    const belumNonton = await tutup("sosialisasi");
+    expect(belumNonton.status).toBe(409);
+
+    // Baru nonton kandidat 1 -- kandidat 2 belum -> masih ditolak.
+    await sandboxDb.collection<VideoKampanye>("video_kampanye").insertOne({
+      _id: newId(), kandidat_id: kandidat1Id, url: "/x.mp4", status: "aktif", created_at: now, published_at: now,
+    });
+    await sandboxDb.collection("progress_pemilih").updateOne(
+      { pemilih_id: pemilih._id },
+      { $set: { video_ditonton: [kandidat1Id], updated_at: now }, $setOnInsert: { _id: newId(), pemilih_id: pemilih._id } },
+      { upsert: true }
+    );
+    const setengah = await tutup("sosialisasi");
+    expect(setengah.status).toBe(409);
+
+    // Nonton kandidat 2 juga -> baru bisa ditutup.
+    await sandboxDb.collection("progress_pemilih").updateOne(
+      { pemilih_id: pemilih._id },
+      { $set: { video_ditonton: [kandidat1Id, kandidat2Id] } }
+    );
+    const semua = await tutup("sosialisasi");
+    expect(semua.status).toBe(200);
   });
 });

@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
+import { hitungPemilihBelumAktivasi, hitungPemilihBelumSosialisasi } from "@/lib/eligibility";
 import type { KontrolFase, StatusFase } from "@/types";
 import { URUTAN_FASE } from "@/types";
 
@@ -27,6 +28,31 @@ export async function POST(
   if (fase.status !== "aktif") return errorJson("Fase ini sedang tidak aktif", 409);
 
   const db = await getDb(await resolveAppMode());
+
+  // Gerbang tambahan, TIDAK ADA PENGECUALIAN: pendataan tidak bisa ditutup
+  // selagi masih ada pemilih di DPT yang belum aktivasi; sosialisasi tidak
+  // bisa ditutup selagi masih ada yang belum menonton semua video kandidat
+  // wajib. Dicek di sini (bukan cuma ditampilkan di /admin/dpt) supaya
+  // benar-benar menegakkan, bukan cuma informasi.
+  if (nama === "pendataan") {
+    const { total, belum } = await hitungPemilihBelumAktivasi(db);
+    if (belum > 0) {
+      return errorJson(
+        `Masih ada ${belum} dari ${total} pemilih yang belum mengaktivasi akunnya -- pendataan tidak bisa ditutup sebelum semua aktivasi selesai, tidak ada pengecualian.`,
+        409
+      );
+    }
+  }
+  if (nama === "sosialisasi") {
+    const { total, belum } = await hitungPemilihBelumSosialisasi(db);
+    if (belum > 0) {
+      return errorJson(
+        `Masih ada ${belum} dari ${total} pemilih yang belum menonton semua video sosialisasi -- sosialisasi tidak bisa ditutup sebelum semua selesai, tidak ada pengecualian.`,
+        409
+      );
+    }
+  }
+
   await db.collection<KontrolFase>("kontrol_fase").updateOne(
     { nama_fase: nama },
     { $set: { status: "ditutup", ditutup_at: new Date() } }
