@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import { JENIS_BUKTI_IDENTITAS, type JenisBuktiIdentitas } from "@/types";
+import { labelNomorBukti } from "@/lib/bukti-identitas";
 
 interface BuktiIdentitas {
   bukti_jenis: JenisBuktiIdentitas | null;
@@ -100,7 +101,7 @@ export default function BuktiIdentitasEditor() {
           )}
           <input
             className="w-full border rounded-lg px-2 py-1.5 text-sm"
-            placeholder="Nomor identitas dokumen"
+            placeholder={`Masukkan ${labelNomorBukti(jenis, jenisLainnya)} Anda`}
             value={nomor}
             onChange={(e) => setNomor(e.target.value)}
             required

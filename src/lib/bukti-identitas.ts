@@ -1,5 +1,13 @@
 import { JENIS_BUKTI_IDENTITAS, type JenisBuktiIdentitas } from "@/types";
 
+// Dipakai di form aktivasi & editor bukti diri (client) supaya label/placeholder
+// nomor menyesuaikan jenis yang dipilih, mis. "Nomor KTP" bukan teks generik.
+export function labelNomorBukti(jenis: string, jenisLainnya: string): string {
+  if (!jenis) return "Nomor Dokumen";
+  if (jenis === "Lainnya") return jenisLainnya ? `Nomor ${jenisLainnya}` : "Nomor Dokumen";
+  return `Nomor ${jenis}`;
+}
+
 export interface BuktiIdentitasInput {
   bukti_jenis: JenisBuktiIdentitas;
   bukti_jenis_lainnya: string | null;

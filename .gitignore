@@ -42,4 +42,4 @@ next-env.d.ts
 !/public/uploads/.gitkeep
 
 # Claude Code local settings (mesin-spesifik, jangan ikut commit)
-.claude/settings.local.json
+.claude/

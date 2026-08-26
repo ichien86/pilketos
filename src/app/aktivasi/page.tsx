@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-fetch";
 import PasswordInput from "@/components/PasswordInput";
 import { JENIS_BUKTI_IDENTITAS, type JenisBuktiIdentitas } from "@/types";
+import { labelNomorBukti } from "@/lib/bukti-identitas";
 
 export default function AktivasiPage() {
   const router = useRouter();
@@ -98,11 +99,12 @@ export default function AktivasiPage() {
               </div>
             )}
             <div>
-              <label className="text-sm font-medium block mb-1">Nomor identitas dokumen tersebut</label>
+              <label className="text-sm font-medium block mb-1">{labelNomorBukti(buktiJenis, buktiJenisLainnya)}</label>
               <input
                 className="w-full border rounded-lg px-3 py-2"
                 value={buktiNomor}
                 onChange={(e) => setBuktiNomor(e.target.value)}
+                placeholder={`Masukkan ${labelNomorBukti(buktiJenis, buktiJenisLainnya)} Anda`}
                 required
               />
             </div>
