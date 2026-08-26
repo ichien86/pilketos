@@ -60,9 +60,9 @@ npm run cron                      # (proses terpisah) sweep TTL bilik/sesi tiap 
 
 ## 4. Prasyarat Proses & Urutan Operasional
 
-1. Fase **wajib** dibuka berurutan: `pendataan` → `pendaftaran_calon` → `sosialisasi` → `simulasi` → `pemilihan`. Tidak bisa melompat (lihat `/admin/fase`).
-2. **Checklist Go/No-Go** (US-21, `/admin/fase`) — 6 item (beban registrasi, integritas transaksi vote, barcode sekali pakai, rekonsiliasi konsisten, koneksi cadangan, isolasi data simulasi) **harus semua lolos** sebelum fase `pemilihan` bisa dibuka. Tidak ada jalur pengecualian di kode.
-3. **Gladi bersih (Epic 6)** wajib dijalankan minimal sekali sebelum hari-H sungguhan, dengan skenario gagal disengaja (scan barcode dua kali, submit vote bersamaan dari token sama, putus koneksi di tengah proses) — ini yang mengisi checklist di atas dengan bukti nyata, bukan asumsi.
+1. Fase **wajib** dibuka berurutan: `pendataan` → `pendaftaran_calon` → `sosialisasi` → `pemilihan`. Tidak bisa melompat (lihat `/admin/fase`). Urutan ini berlaku SAMA PERSIS baik untuk produksi maupun mode uji coba (lihat poin 3) — mode uji coba tidak melompati urutan ini, cuma memindahkan datanya (termasuk status kelima fase itu sendiri) ke database terpisah.
+2. **Checklist Go/No-Go** (US-21, dicentang panitia di `/panitia/checklist`, dipantau read-only di `/admin/fase`) — 6 item (beban registrasi, integritas transaksi vote, barcode sekali pakai, rekonsiliasi konsisten, koneksi cadangan, isolasi data uji coba) **harus semua lolos** sebelum fase `pemilihan` bisa dibuka. Tidak ada jalur pengecualian di kode.
+3. **Mode Uji Coba / gladi bersih (Epic 6)** — bukan fase tersendiri, melainkan flag global (`/admin/fase`, `src/lib/mode.ts`) yang menentukan apakah proses fase yang sedang dijalankan itu untuk uji coba atau produksi sungguhan. Wajib dijalankan minimal sekali sebelum hari-H sungguhan, dengan skenario gagal disengaja (scan barcode dua kali, submit vote bersamaan dari token sama, putus koneksi di tengah proses) — ini yang mengisi checklist di atas dengan bukti nyata, bukan asumsi. Mematikan mode ini menghapus TOTAL database sandboxnya, termasuk status kelima fase di atas.
 4. Reopen fase yang sudah ditutup (skenario darurat) butuh konfirmasi ganda di UI dan flag `force=true` di API — dipakai **hanya** untuk keadaan darurat, bukan alur normal.
 5. Password reset (US-04) dan reset apa pun yang menyentuh status aktivasi **selalu tercatat log** (`reset_log`) — jangan hapus log ini secara manual.
 

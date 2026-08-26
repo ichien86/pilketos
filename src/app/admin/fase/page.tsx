@@ -21,28 +21,53 @@ const NAMA_LABEL: Record<string, string> = {
   pendataan: "Pendataan",
   pendaftaran_calon: "Pendaftaran Calon",
   sosialisasi: "Sosialisasi",
-  simulasi: "Simulasi / Uji Coba",
   pemilihan: "Pemilihan (Hari-H)",
 };
 
-// US-18 (kontrol fase) + US-21 (checklist Go/No-Go).
+// US-18 (kontrol fase) + US-21 (checklist Go/No-Go) + mode uji coba (lib/mode.ts).
 export default function AdminFasePage() {
   const [fase, setFase] = useState<Fase[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [ujiCobaAktif, setUjiCobaAktif] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busyMode, setBusyMode] = useState(false);
 
   async function refresh() {
-    const [f, c] = await Promise.all([
+    const [f, c, m] = await Promise.all([
       apiFetch<Fase[]>("/api/fase"),
       apiFetch<ChecklistItem[]>("/api/simulasi/checklist"),
+      apiFetch<{ aktif: boolean }>("/api/mode/uji-coba"),
     ]);
     setFase(f);
     setChecklist(c);
+    setUjiCobaAktif(m.aktif);
   }
 
   useEffect(() => {
     refresh();
   }, []);
+
+  async function toggleUjiCoba(aktif: boolean) {
+    if (!aktif) {
+      if (
+        !confirm(
+          "Matikan mode uji coba? SEMUA data uji coba (DPT, kandidat, video, status kelima fase, checklist, dst) akan dihapus total dan tidak bisa dikembalikan."
+        )
+      ) {
+        return;
+      }
+    }
+    setBusyMode(true);
+    setError(null);
+    try {
+      await apiFetch("/api/mode/uji-coba", { method: "POST", body: JSON.stringify({ aktif }) });
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal mengubah mode");
+    } finally {
+      setBusyMode(false);
+    }
+  }
 
   async function buka(nama: string, force = false) {
     setError(null);
@@ -89,6 +114,28 @@ export default function AdminFasePage() {
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
+      <div className={`rounded-xl shadow p-4 space-y-2 ${ujiCobaAktif ? "bg-amber-50" : "bg-white"}`}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold">Mode Uji Coba</h2>
+          <span className={`text-xs px-2 py-1 rounded-full font-mono ${ujiCobaAktif ? "bg-amber-400 text-amber-950" : "bg-slate-100 text-slate-500"}`}>
+            {ujiCobaAktif ? "aktif" : "nonaktif"}
+          </span>
+        </div>
+        <p className="text-sm text-slate-500">
+          Bukan fase tersendiri -- ini flag yang menentukan apakah kelima fase di bawah (dan DPT/kandidat/sosialisasi/hari-H
+          di dalamnya) sedang dijalankan untuk uji coba atau produksi sungguhan. Alurnya tetap sama persis, tetap harus
+          dibuka berurutan dari Pendataan -- cuma datanya (termasuk status kelima fase itu sendiri) hidup di database
+          terpisah selama mode ini aktif, dan hilang total begitu dimatikan.
+        </p>
+        <button
+          onClick={() => toggleUjiCoba(!ujiCobaAktif)}
+          disabled={busyMode}
+          className={`text-sm rounded-lg px-3 py-1.5 text-white disabled:opacity-50 ${ujiCobaAktif ? "bg-red-600" : "bg-emerald-600"}`}
+        >
+          {ujiCobaAktif ? "Matikan Mode Uji Coba (reset semua data uji coba)" : "Aktifkan Mode Uji Coba"}
+        </button>
+      </div>
+
       <div className="space-y-3">
         {fase.map((f) => (
           <div key={f.nama_fase} className="bg-white rounded-xl shadow p-4 flex items-center justify-between">
@@ -97,12 +144,6 @@ export default function AdminFasePage() {
               <p className="text-xs text-slate-500">
                 status: <span className="font-mono">{f.status}</span>
               </p>
-              {f.nama_fase === "simulasi" && (
-                <p className="text-xs text-slate-400 mt-1 max-w-md">
-                  Bisa dibuka/tutup kapan saja, tidak perlu menunggu fase lain -- semua fitur (DPT, kandidat, sosialisasi,
-                  hari-H) otomatis pakai data terpisah selama ini aktif, dan semua data itu hilang total begitu ditutup.
-                </p>
-              )}
             </div>
             <div className="flex gap-2">
               {f.status !== "aktif" && (

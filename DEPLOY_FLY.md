@@ -128,7 +128,7 @@ ulang -- hanya kode aplikasinya yang berganti.
      `pilketos_simulasi` (bukan `pilketos_prod`) supaya user aplikasi secara
      fisik tidak bisa menjalankan `dropDatabase()` di data produksi, walau
      ada bug di kode. Kode hanya pernah memanggil `dropDatabase()` pada
-     database simulasi (`src/lib/simulasi.ts`).
+     database simulasi (`src/lib/mode.ts`, saat mode uji coba dinyalakan/dimatikan).
 3. **Network Access** -> karena Fly.io tidak punya IP keluar yang tetap,
    tambahkan `0.0.0.0/0` (semua IP). Ini standar untuk platform serverless/
    container tanpa IP statis -- keamanan tetap terjaga lewat username+password

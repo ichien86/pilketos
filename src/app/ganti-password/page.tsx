@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-fetch";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function GantiPasswordPage() {
   const router = useRouter();
@@ -36,11 +37,11 @@ export default function GantiPasswordPage() {
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label className="text-sm font-medium block mb-1">Password lama/sementara</label>
-            <input type="password" className="w-full border rounded-lg px-3 py-2" value={passwordLama} onChange={(e) => setPasswordLama(e.target.value)} required />
+            <PasswordInput value={passwordLama} onChange={setPasswordLama} required />
           </div>
           <div>
             <label className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
-            <input type="password" className="w-full border rounded-lg px-3 py-2" value={passwordBaru} onChange={(e) => setPasswordBaru(e.target.value)} required minLength={8} />
+            <PasswordInput value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
           </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white rounded-lg py-2 font-medium disabled:opacity-50">

@@ -19,7 +19,6 @@ const FASE_LABEL: Record<string, string> = {
   pendataan: "Pendataan",
   pendaftaran_calon: "Pendaftaran Calon",
   sosialisasi: "Sosialisasi",
-  simulasi: "Simulasi / Uji Coba",
   pemilihan: "Pemilihan (Hari-H)",
 };
 
@@ -29,13 +28,12 @@ interface Fase {
 }
 
 // Dashboard tunggal yang menyesuaikan diri ke tahapan yang sedang berjalan --
-// pemilih tidak perlu memilih menu sendiri. Sosialisasi ASLI aktif -> alihkan
-// ke materi kampanye. Simulasi (uji coba)/pemilihan aktif -> ikuti status
-// sesi hari-H (barcode identitas -> bilik -> bukti), persis alur lama, cuma
-// sekarang tidak muncul kalau bukan waktunya. Nav Sosialisasi/Profil tetap
-// tersedia selama simulasi (uji coba mencakup semua fitur, bukan cuma
-// hari-H), tapi disembunyikan saat "pemilihan" sungguhan (kiosk murni, US-24
-// asli: tidak ada distraksi menu lain). Fase lain -> tidak ada tugas.
+// pemilih tidak perlu memilih menu sendiri. Sosialisasi aktif -> alihkan ke
+// materi kampanye. Pemilihan aktif -> ikuti status sesi hari-H (barcode
+// identitas -> bilik -> bukti) sebagai layar kiosk murni tanpa menu lain
+// (US-24). Fase lain -> tidak ada tugas. `faseAktif` di sini otomatis ikut
+// mode global (produksi/uji coba, lihat resolveAppMode() di server) --
+// halaman ini sendiri tidak perlu tahu sedang mode apa.
 export default function PemilihHomePage() {
   const router = useRouter();
   const [faseAktif, setFaseAktif] = useState<string | null | undefined>(undefined);
@@ -59,14 +57,10 @@ export default function PemilihHomePage() {
     if (faseAktif === "sosialisasi") router.replace("/pemilih/sosialisasi");
   }, [faseAktif, router]);
 
-  // "simulasi" sekarang mode uji coba untuk SEMUA fitur (bukan cuma hari-H),
-  // jadi nav Sosialisasi/Profil tetap tersedia di sana -- hanya "pemilihan"
-  // sungguhan yang jadi layar kiosk murni tanpa distraksi menu lain.
-  const hariHFlow = faseAktif === "simulasi" || faseAktif === "pemilihan";
-  const hariHKiosk = faseAktif === "pemilihan";
+  const hariH = faseAktif === "pemilihan";
 
   useEffect(() => {
-    if (!hariHFlow) return;
+    if (!hariH) return;
     let cancelled = false;
     async function refreshBarcode() {
       try {
@@ -82,10 +76,10 @@ export default function PemilihHomePage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [hariHFlow]);
+  }, [hariH]);
 
   useEffect(() => {
-    if (!hariHFlow) return;
+    if (!hariH) return;
     let cancelled = false;
     async function poll() {
       try {
@@ -114,7 +108,7 @@ export default function PemilihHomePage() {
       clearInterval(pollingRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hariHFlow]);
+  }, [hariH]);
 
   if (faseAktif === undefined) {
     return (
@@ -127,15 +121,15 @@ export default function PemilihHomePage() {
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
-        <h1 className="text-lg font-bold">{hariHFlow ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
+        <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
         <nav className="flex items-center gap-3 text-sm text-blue-600">
-          {!hariHKiosk && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
-          {!hariHKiosk && <a href="/pemilih/profil" className="hover:underline">Profil</a>}
+          {!hariH && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
+          {!hariH && <a href="/pemilih/profil" className="hover:underline">Profil</a>}
           <LogoutButton />
         </nav>
       </header>
 
-      {hariHFlow ? (
+      {hariH ? (
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
           <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
           {(status === "belum_checkin" || status === "kedaluwarsa") && qrPayload && (

@@ -10,14 +10,12 @@ export const dynamic = "force-dynamic";
 // US-02 (aktivasi pertama) + US-05 (gerbang penutupan masa pendataan).
 export async function POST(req: NextRequest) {
   const mode = await resolveAppMode();
-  if (mode === "prod") {
-    const fase = await getFase("pendataan");
-    if (fase.status !== "aktif") {
-      return errorJson(
-        "Masa pendataan sudah ditutup -- aktivasi akun tidak bisa lagi dilakukan, tidak ada pengecualian",
-        403
-      );
-    }
+  const fase = await getFase("pendataan");
+  if (fase.status !== "aktif") {
+    return errorJson(
+      "Masa pendataan sudah ditutup -- aktivasi akun tidak bisa lagi dilakukan, tidak ada pengecualian",
+      403
+    );
   }
 
   const body = await req.json().catch(() => null);

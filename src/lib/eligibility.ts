@@ -1,25 +1,17 @@
 import type { Db } from "mongodb";
-import type { DbMode } from "@/lib/db";
 import { getFase } from "@/lib/fase-gate";
 import type { AkunPengguna, Kandidat, ProgressPemilih } from "@/types";
 
 /**
- * Daftar kandidat_id yang wajib sudah ditonton videonya. Mode "prod" pakai
- * snapshot kandidat_terkunci (dibekukan saat fase sosialisasi ASLI dibuka --
- * lihat US-12, mencegah daftar kandidat berubah-ubah di tengah sosialisasi).
- * Mode "simulasi" (uji coba) TIDAK pernah melalui alur buka-fase-sosialisasi
- * yang sesungguhnya (itu selalu di database prod), jadi dihitung langsung
- * dari kandidat berstatus aktif di database simulasi saat ini -- tanpa
- * snapshot, supaya menguji kandidat/video tidak perlu buka-tutup fase apa pun.
+ * Daftar kandidat_id yang wajib sudah ditonton videonya -- snapshot
+ * kandidat_terkunci yang dibekukan saat fase sosialisasi dibuka (US-12,
+ * mencegah daftar kandidat berubah-ubah di tengah sosialisasi). getFase()
+ * sendiri sudah otomatis mode-aware (lihat fase-gate.ts/mode.ts), jadi di
+ * mode uji coba ini otomatis baca snapshot dari database sandbox -- TANPA
+ * perlu tahu mode di sini sama sekali, selama `db` yang dipakai memanggil
+ * fungsi ini juga sudah diresolve dengan mode yang sama oleh caller.
  */
-export async function kandidatWajibDitonton(db: Db, mode: DbMode): Promise<string[]> {
-  if (mode === "simulasi") {
-    const list = await db
-      .collection<Kandidat>("kandidat")
-      .find({ status: "aktif" }, { projection: { _id: 1 } })
-      .toArray();
-    return list.map((k) => k._id);
-  }
+export async function kandidatWajibDitonton(db: Db): Promise<string[]> {
   const faseSosialisasi = await getFase("sosialisasi");
   const terkunciId = faseSosialisasi.kandidat_terkunci ?? [];
   if (terkunciId.length === 0) return [];
@@ -37,17 +29,12 @@ export async function kandidatWajibDitonton(db: Db, mode: DbMode): Promise<strin
  * (langkah 1, hanya ditampilkan) maupun di langkah ACC (langkah 2, validasi
  * ulang sebelum mengubah status apa pun -- jangan percaya hasil langkah 1).
  */
-export async function hitungLolosSyarat(
-  db: Db,
-  pemilihId: string,
-  akun: AkunPengguna | null,
-  mode: DbMode
-): Promise<boolean> {
+export async function hitungLolosSyarat(db: Db, pemilihId: string, akun: AkunPengguna | null): Promise<boolean> {
   if (!akun?.aktivasi_selesai) return false;
 
   const [progress, wajib] = await Promise.all([
     db.collection<ProgressPemilih>("progress_pemilih").findOne({ pemilih_id: pemilihId }),
-    kandidatWajibDitonton(db, mode),
+    kandidatWajibDitonton(db),
   ]);
   const ditonton = new Set(progress?.video_ditonton ?? []);
   if (wajib.length === 0) return false;

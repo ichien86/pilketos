@@ -10,7 +10,6 @@ export type StatusFase =
   | "pendataan"
   | "pendaftaran_calon"
   | "sosialisasi"
-  | "simulasi"
   | "pemilihan";
 
 export type StatusKandidat = "draft" | "aktif" | "dibatalkan";
@@ -100,6 +99,23 @@ export interface KontrolFase {
   hasil_diumumkan_at: Date | null;
 }
 
+/**
+ * Mode uji coba BUKAN fase tersendiri -- ini flag global yang menentukan
+ * apakah proses fase yang SEDANG dijalankan (pendataan, pendaftaran_calon,
+ * sosialisasi, pemilihan -- alurnya tetap sama persis, tetap harus dibuka
+ * berurutan) itu untuk uji coba atau produksi sungguhan. Aktif -> SEMUA
+ * data (termasuk status kelima fase di atas) hidup di database terpisah;
+ * dimatikan -> database itu dihapus total (lihat lib/mode.ts).
+ * Selalu disimpan di database produksi (satu-satunya yang always-on),
+ * sama seperti alasan kontrol_fase dulunya selalu di prod.
+ */
+export interface PengaturanMode {
+  _id: string;
+  uji_coba_aktif: boolean;
+  diaktifkan_at: Date | null;
+  dinonaktifkan_at: Date | null;
+}
+
 export interface SesiPemilih {
   _id: string;
   pemilih_id: string;
@@ -165,6 +181,5 @@ export const URUTAN_FASE: StatusFase[] = [
   "pendataan",
   "pendaftaran_calon",
   "sosialisasi",
-  "simulasi",
   "pemilihan",
 ];

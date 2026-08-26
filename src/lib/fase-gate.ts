@@ -1,16 +1,19 @@
 import type { Db } from "mongodb";
 import { getDb, type DbMode } from "@/lib/db";
+import { resolveAppMode } from "@/lib/mode";
 import { URUTAN_FASE, type KontrolFase, type StatusFase } from "@/types";
 
+export { resolveAppMode };
+
 /**
- * Mesin status fase itu SATU untuk seluruh sekolah, jadi selalu disimpan di
- * database produksi (getDb("prod")) -- termasuk saat fase "simulasi" sedang
- * aktif, karena "sedang simulasi" itu sendiri adalah bagian dari status
- * global, bukan data yang diisolasi (yang diisolasi adalah data pemilih/
- * kandidat/sesi/bilik-nya, lihat db.ts & keputusan desain #4).
+ * Mesin status fase (pendataan..pemilihan) ikut database mana yang sedang
+ * "aktif" secara mode -- resolveAppMode() (lib/mode.ts) yang memutuskan
+ * produksi atau sandbox uji coba. Ini BUKAN fase tersendiri: alur buka/tutup
+ * kelima fase di atas identik persis di kedua mode, cuma datanya (termasuk
+ * status fase itu sendiri) hidup di database terpisah saat uji coba aktif.
  */
 export async function getFaseDb(): Promise<Db> {
-  return getDb("prod");
+  return getDb(await resolveAppMode());
 }
 
 export async function getAllFase(): Promise<KontrolFase[]> {
@@ -57,38 +60,20 @@ export async function requireFaseAktif(nama: StatusFase): Promise<KontrolFase> {
 }
 
 /**
- * Alur hari-H (checkin, ACC, klaim bilik, submit vote, exit scan) dipakai
- * ulang persis sama baik untuk fase "simulasi" (US-20) maupun fase
- * "pemilihan" sungguhan -- yang membedakan cuma database mana yang dipakai.
- * Fungsi ini SATU-SATUNYA tempat yang memutuskan mode itu, berdasarkan fase
- * global mana yang sedang aktif (server-authoritative, bukan dari client).
+ * Alur hari-H (checkin, ACC, klaim bilik, submit vote, exit scan) butuh fase
+ * "pemilihan" aktif -- di mode produksi maupun uji coba, cek dan databasenya
+ * SAMA-SAMA otomatis ikut resolveAppMode() lewat getFase() di atas, jadi
+ * fungsi ini tinggal memastikan gerbangnya lalu meneruskan mode yang sama.
  */
 export async function resolveHariHMode(): Promise<DbMode> {
-  const [simulasi, pemilihan] = await Promise.all([
-    getFase("simulasi"),
-    getFase("pemilihan"),
-  ]);
-  if (simulasi.status === "aktif") return "simulasi";
-  if (pemilihan.status === "aktif") return "prod";
-  throw new FaseGateError(
-    "Alur hari-H hanya bisa dipakai saat fase simulasi atau pemilihan aktif"
-  );
+  const mode = await resolveAppMode();
+  const fase = await getFase("pemilihan");
+  if (fase.status !== "aktif") {
+    throw new FaseGateError("Alur hari-H hanya bisa dipakai saat fase pemilihan aktif");
+  }
+  return mode;
 }
 
 export function urutanIndex(nama: StatusFase): number {
   return URUTAN_FASE.indexOf(nama);
-}
-
-/**
- * Mode aplikasi untuk fitur DI LUAR alur hari-H (DPT, kandidat, video/
- * sosialisasi, bilik) -- fase "simulasi" sekarang berfungsi ganda sebagai
- * mode "uji coba": begitu aktif, SEMUA fitur itu otomatis pindah ke database
- * simulasi (data terpisah, direset total saat fase ini ditutup -- lihat
- * lib/simulasi.ts), tanpa perlu buka/tutup fase pendataan/pendaftaran_calon/
- * sosialisasi yang ASLI. TIDAK PERNAH throw (beda dari resolveHariHMode) --
- * fitur-fitur ini harus selalu bisa dipakai, aktif "prod" adalah default.
- */
-export async function resolveAppMode(): Promise<DbMode> {
-  const simulasi = await getFase("simulasi");
-  return simulasi.status === "aktif" ? "simulasi" : "prod";
 }

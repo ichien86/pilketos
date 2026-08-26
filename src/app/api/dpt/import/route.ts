@@ -16,11 +16,9 @@ export async function POST(req: NextRequest) {
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const appMode = await resolveAppMode();
-  if (appMode === "prod") {
-    const fase = await getFase("pendataan");
-    if (fase.status === "ditutup") {
-      return errorJson("Masa pendataan sudah ditutup -- import DPT tidak bisa lagi dilakukan", 403);
-    }
+  const fase = await getFase("pendataan");
+  if (fase.status === "ditutup") {
+    return errorJson("Masa pendataan sudah ditutup -- import DPT tidak bisa lagi dilakukan", 403);
   }
 
   const form = await req.formData().catch(() => null);

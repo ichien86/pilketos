@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   // "Memenuhi persyaratan pemilih" = sudah menonton video sosialisasi semua
   // paslon wajib (persis logika US-12 di /api/progress dan eligibility.ts,
   // cuma dihitung sekaligus untuk semua pemilih di sini).
-  const kandidatWajib = await kandidatWajibDitonton(db, mode);
+  const kandidatWajib = await kandidatWajibDitonton(db);
   const totalWajibTonton = kandidatWajib.length;
   const progressList = await db
     .collection<ProgressPemilih>("progress_pemilih")
@@ -65,11 +65,9 @@ export async function POST(req: NextRequest) {
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
   const mode = await resolveAppMode();
-  if (mode === "prod") {
-    const fase = await getFase("pendataan");
-    if (fase.status === "ditutup") {
-      return errorJson("Masa pendataan sudah ditutup -- tidak bisa menambah pemilih baru", 403);
-    }
+  const fase = await getFase("pendataan");
+  if (fase.status === "ditutup") {
+    return errorJson("Masa pendataan sudah ditutup -- tidak bisa menambah pemilih baru", 403);
   }
 
   const body = await req.json().catch(() => null);

@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import { getFase } from "@/lib/fase-gate";
-import { teardownSimulasi } from "@/lib/simulasi";
+import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import type { KontrolFase, StatusFase } from "@/types";
 import { URUTAN_FASE } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-// US-18 -- tutup fase. Menutup "simulasi" juga menghapus total database
-// simulasi (US-19). Menutup "pendataan" mengunci endpoint aktivasi (US-05).
+// US-18 -- tutup fase. Menutup "pendataan" mengunci endpoint aktivasi (US-05).
+// Ditulis ke database mode yang sedang aktif (produksi atau sandbox uji
+// coba) -- lihat resolveAppMode(). Mematikan mode uji coba itu sendiri
+// (yang mereset SEMUA fase sekaligus) ada di /api/mode/uji-coba, terpisah
+// dari menutup satu fase seperti di sini.
 export async function POST(
   req: NextRequest,
   { params }: { params: { nama: string } }
@@ -24,15 +26,11 @@ export async function POST(
   const fase = await getFase(nama);
   if (fase.status !== "aktif") return errorJson("Fase ini sedang tidak aktif", 409);
 
-  const db = await getDb("prod");
+  const db = await getDb(await resolveAppMode());
   await db.collection<KontrolFase>("kontrol_fase").updateOne(
     { nama_fase: nama },
     { $set: { status: "ditutup", ditutup_at: new Date() } }
   );
-
-  if (nama === "simulasi") {
-    await teardownSimulasi();
-  }
 
   const updated = await db.collection<KontrolFase>("kontrol_fase").findOne({ nama_fase: nama });
   return NextResponse.json(updated);

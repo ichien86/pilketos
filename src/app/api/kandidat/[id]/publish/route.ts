@@ -16,11 +16,9 @@ export async function POST(
   if (!requireRole(claims, ["panitia", "admin"])) return errorJson("Tidak diizinkan", 403);
 
   const mode = await resolveAppMode();
-  if (mode === "prod") {
-    const fasePendaftaran = await getFase("pendaftaran_calon");
-    if (fasePendaftaran.status !== "aktif") {
-      return errorJson("Publish kandidat hanya bisa dilakukan selama masa pendaftaran calon aktif", 403);
-    }
+  const fasePendaftaran = await getFase("pendaftaran_calon");
+  if (fasePendaftaran.status !== "aktif") {
+    return errorJson("Publish kandidat hanya bisa dilakukan selama masa pendaftaran calon aktif", 403);
   }
 
   const db = await getDb(mode);

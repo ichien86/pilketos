@@ -1,10 +1,12 @@
 import "./load-env";
-import { seedSimulasi } from "../src/lib/simulasi";
+import { aktifkanUjiCoba } from "../src/lib/mode";
 
-// Seeding manual di luar alur "buka fase simulasi" (mis. untuk debugging lokal).
-seedSimulasi()
+// Nyalakan mode uji coba secara manual di luar UI (mis. debugging lokal) --
+// menyiapkan database sandbox kosong (kelima fase "belum_dibuka", checklist
+// kosong), sama persis seperti admin menekan "Aktifkan Mode Uji Coba".
+aktifkanUjiCoba()
   .then(() => {
-    console.log("Database simulasi berhasil di-seed ulang.");
+    console.log("Mode uji coba aktif -- database sandbox siap dari nol.");
     process.exit(0);
   })
   .catch((err) => {

@@ -15,9 +15,8 @@ export async function GET(req: NextRequest) {
     return errorJson("Tidak diizinkan", 403);
   }
 
-  const mode = await resolveAppMode();
-  const db = await getDb(mode);
-  const kandidatWajib = await kandidatWajibDitonton(db, mode);
+  const db = await getDb(await resolveAppMode());
+  const kandidatWajib = await kandidatWajibDitonton(db);
 
   const [kandidatList, progress] = await Promise.all([
     db.collection<Kandidat>("kandidat").find({ _id: { $in: kandidatWajib } }).toArray(),

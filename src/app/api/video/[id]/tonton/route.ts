@@ -19,11 +19,9 @@ export async function POST(
   }
 
   const mode = await resolveAppMode();
-  if (mode === "prod") {
-    const fase = await getFase("sosialisasi");
-    if (fase.status !== "aktif") {
-      return errorJson("Masa sosialisasi sedang tidak berlangsung", 403);
-    }
+  const fase = await getFase("sosialisasi");
+  if (fase.status !== "aktif") {
+    return errorJson("Masa sosialisasi sedang tidak berlangsung", 403);
   }
 
   const db = await getDb(mode);

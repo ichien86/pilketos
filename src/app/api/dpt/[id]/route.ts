@@ -9,8 +9,7 @@ export const dynamic = "force-dynamic";
 
 const TANGGAL_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-async function guardPendataanAktif(mode: Awaited<ReturnType<typeof resolveAppMode>>) {
-  if (mode !== "prod") return null;
+async function guardPendataanAktif() {
   const fase = await getFase("pendataan");
   if (fase.status === "ditutup") {
     return errorJson("Masa pendataan sudah ditutup -- data pemilih tidak bisa lagi diubah", 403);
@@ -22,9 +21,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const mode = await resolveAppMode();
-  const gagalGate = await guardPendataanAktif(mode);
+  const gagalGate = await guardPendataanAktif();
   if (gagalGate) return gagalGate;
+
+  const mode = await resolveAppMode();
 
   const db = await getDb(mode);
   const pemilih = await db.collection<PemilihDpt>("pemilih_dpt").findOne({ _id: params.id });
@@ -74,11 +74,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["admin", "panitia"])) return errorJson("Tidak diizinkan", 403);
 
-  const mode = await resolveAppMode();
-  const gagalGate = await guardPendataanAktif(mode);
+  const gagalGate = await guardPendataanAktif();
   if (gagalGate) return gagalGate;
 
-  const db = await getDb(mode);
+  const db = await getDb(await resolveAppMode());
   const pemilih = await db.collection<PemilihDpt>("pemilih_dpt").findOne({ _id: params.id });
   if (!pemilih) return errorJson("Data pemilih tidak ditemukan", 404);
 

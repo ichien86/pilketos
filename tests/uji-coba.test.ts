@@ -3,34 +3,50 @@ import { NextRequest } from "next/server";
 import { POST as bukaFase } from "@/app/api/fase/[nama]/buka/route";
 import { POST as tutupFase } from "@/app/api/fase/[nama]/tutup/route";
 import { POST as tambahDpt, GET as listDpt } from "@/app/api/dpt/route";
+import { POST as tambahKandidat } from "@/app/api/kandidat/route";
+import { GET as getModeUjiCoba, POST as setModeUjiCoba } from "@/app/api/mode/uji-coba/route";
 import { signSession } from "@/lib/auth";
 import { newId } from "@/lib/id";
+import { resolveAppMode } from "@/lib/mode";
 import { getDb } from "@/lib/db";
-import { resolveAppMode } from "@/lib/fase-gate";
-import type { PemilihDpt } from "@/types";
+import type { PemilihDpt, Kandidat } from "@/types";
 
 function adminCookie(): string {
   const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "admin", username: "admin1" });
   return `pilketos_session=${token}`;
 }
+function panitiaCookie(): string {
+  const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "panitia", username: "panitia1" });
+  return `pilketos_session=${token}`;
+}
 
-function bukaReq(nama: string) {
+function modeReq(aktif: boolean, cookie = adminCookie()) {
+  return new NextRequest("http://localhost/api/mode/uji-coba", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ aktif }),
+  });
+}
+function bukaReq(nama: string, cookie = adminCookie()) {
   return new NextRequest(`http://localhost/api/fase/${nama}/buka`, {
     method: "POST",
-    headers: { "content-type": "application/json", cookie: adminCookie() },
+    headers: { "content-type": "application/json", cookie },
     body: JSON.stringify({}),
   });
 }
 function tutupReq(nama: string) {
-  return new NextRequest(`http://localhost/api/fase/${nama}/tutup`, {
-    method: "POST",
-    headers: { cookie: adminCookie() },
-  });
+  return new NextRequest(`http://localhost/api/fase/${nama}/tutup`, { method: "POST", headers: { cookie: adminCookie() } });
 }
-function dptTambahReq() {
+async function buka(nama: string) {
+  return bukaFase(bukaReq(nama), { params: { nama } });
+}
+async function tutup(nama: string) {
+  return tutupFase(tutupReq(nama), { params: { nama } });
+}
+function dptTambahReq(cookie = panitiaCookie()) {
   return new NextRequest("http://localhost/api/dpt", {
     method: "POST",
-    headers: { "content-type": "application/json", cookie: adminCookie() },
+    headers: { "content-type": "application/json", cookie },
     body: JSON.stringify({
       jenis: "siswa",
       nis_nip: "UJI001",
@@ -40,36 +56,77 @@ function dptTambahReq() {
     }),
   });
 }
-function dptListReq() {
-  return new NextRequest("http://localhost/api/dpt", { headers: { cookie: adminCookie() } });
+function dptListReq(cookie = panitiaCookie()) {
+  return new NextRequest("http://localhost/api/dpt", { headers: { cookie } });
+}
+function kandidatTambahReq(cookie = panitiaCookie()) {
+  return new NextRequest("http://localhost/api/kandidat", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ nomor_urut: 1, nama_ketua: "Ketua Uji", nama_wakil: "Wakil Uji" }),
+  });
 }
 
-describe("mode uji coba (fase simulasi jadi sandbox semua fitur)", () => {
-  it("bisa dibuka langsung TANPA pendataan/pendaftaran_calon/sosialisasi selesai dulu", async () => {
-    // Sengaja TIDAK seed fase apa pun -- semuanya "belum_dibuka" dari awal,
-    // persis kondisi sebelum sekolah mulai memakai aplikasi ini.
-    const res = await bukaFase(bukaReq("simulasi"), { params: { nama: "simulasi" } });
-    expect(res.status).toBe(200);
-    expect(await resolveAppMode()).toBe("simulasi");
+describe("mode uji coba (flag global, bukan fase tersendiri)", () => {
+  it("hanya admin yang boleh menyalakan/mematikan", async () => {
+    const res = await setModeUjiCoba(modeReq(true, panitiaCookie()));
+    expect(res.status).toBe(403);
   });
 
-  it("bisa ditutup lalu dibuka lagi berkali-kali TANPA force/konfirmasi darurat", async () => {
-    await bukaFase(bukaReq("simulasi"), { params: { nama: "simulasi" } });
-    const tutupRes = await tutupFase(tutupReq("simulasi"), { params: { nama: "simulasi" } });
-    expect(tutupRes.status).toBe(200);
+  it("menyala -> resolveAppMode() jadi simulasi; mati -> kembali prod", async () => {
+    expect(await resolveAppMode()).toBe("prod");
 
-    // Reopen -- fase lain masih "belum_dibuka" (bukan siklus real), dan status
-    // simulasi sendiri sekarang "ditutup". Fase produksi lain butuh force=true
-    // untuk skenario ini (lihat acc.test.ts pola serupa) -- simulasi TIDAK.
-    const res2 = await bukaFase(bukaReq("simulasi"), { params: { nama: "simulasi" } });
-    expect(res2.status).toBe(200);
+    await setModeUjiCoba(modeReq(true));
+    expect(await resolveAppMode()).toBe("simulasi");
+
+    await setModeUjiCoba(modeReq(false));
+    expect(await resolveAppMode()).toBe("prod");
+  });
+
+  it("status GET mencerminkan flag tanpa perlu login", async () => {
+    await setModeUjiCoba(modeReq(true));
+    const res = await getModeUjiCoba();
+    const body = await res.json();
+    expect(body.aktif).toBe(true);
+  });
+
+  it("saat uji coba aktif, fase TETAP harus dibuka berurutan -- tidak ada jalan pintas", async () => {
+    await setModeUjiCoba(modeReq(true));
+
+    // Loncat ke pendaftaran_calon tanpa pendataan dibuka+ditutup dulu -> ditolak,
+    // persis seperti aturan produksi biasa.
+    const res = await buka("pendaftaran_calon");
+    expect(res.status).toBe(409);
+
+    // Buka pendataan dulu -> berhasil (di sandbox, karena mode aktif).
+    const resPendataan = await buka("pendataan");
+    expect(resPendataan.status).toBe(200);
+  });
+
+  it("kandidat tidak bisa didaftarkan sebelum fase pendaftaran_calon sandbox aktif -- gerbang tetap ditegakkan", async () => {
+    await setModeUjiCoba(modeReq(true));
+
+    const ditolak = await tambahKandidat(kandidatTambahReq());
+    expect(ditolak.status).toBe(403);
+
+    await buka("pendataan");
+    await tutup("pendataan");
+    await buka("pendaftaran_calon");
+
+    const berhasil = await tambahKandidat(kandidatTambahReq());
+    expect(berhasil.status).toBe(201);
+
+    const prodDb = await getDb("prod");
+    const diProd = await prodDb.collection<Kandidat>("kandidat").findOne({ nama_ketua: "Ketua Uji" });
+    expect(diProd).toBeNull();
   });
 
   it("DPT yang ditambah selama mode uji coba masuk ke database simulasi, bukan prod", async () => {
-    await bukaFase(bukaReq("simulasi"), { params: { nama: "simulasi" } });
+    await setModeUjiCoba(modeReq(true));
+    await buka("pendataan");
 
-    const tambahRes = await tambahDpt(dptTambahReq());
-    expect(tambahRes.status).toBe(201);
+    const berhasil = await tambahDpt(dptTambahReq());
+    expect(berhasil.status).toBe(201);
 
     const listRes = await listDpt(dptListReq());
     const daftar = await listRes.json();
@@ -80,15 +137,20 @@ describe("mode uji coba (fase simulasi jadi sandbox semua fitur)", () => {
     expect(diProd).toBeNull();
   });
 
-  it("semua data uji coba hilang total begitu fase simulasi ditutup", async () => {
-    await bukaFase(bukaReq("simulasi"), { params: { nama: "simulasi" } });
+  it("mematikan mode uji coba mereset SEMUA data termasuk status kelima fase", async () => {
+    await setModeUjiCoba(modeReq(true));
+    await buka("pendataan");
     await tambahDpt(dptTambahReq());
+    await tutup("pendataan");
 
-    await tutupFase(tutupReq("simulasi"), { params: { nama: "simulasi" } });
+    await setModeUjiCoba(modeReq(false));
 
-    // Setelah ditutup, mode kembali "prod" -- daftar DPT yang kelihatan lewat
-    // endpoint yang sama sekarang harus database prod (kosong, tidak ada
-    // sisa data UJI001 manapun).
+    // Nyalakan lagi -- harus mulai dari nol lagi (pendataan "belum_dibuka"),
+    // bukan meneruskan status "ditutup" dari sesi uji coba sebelumnya.
+    await setModeUjiCoba(modeReq(true));
+    const res = await buka("pendaftaran_calon");
+    expect(res.status).toBe(409); // pendataan lagi-lagi belum dibuka -> masih harus berurutan dari awal
+
     const listRes = await listDpt(dptListReq());
     const daftar = await listRes.json();
     expect(daftar.some((p: { nis_nip: string }) => p.nis_nip === "UJI001")).toBe(false);
