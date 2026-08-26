@@ -55,6 +55,7 @@ npm run cron                      # (proses terpisah) sweep TTL bilik/sesi tiap 
 - **Password default** (`DEFAULT_PASSWORD`, default `MAN3Byl`): sama untuk semua akun pemilih sebelum aktivasi — **wajib** diganti sebelum masa pendataan dimulai kalau nilai default ini pernah bocor ke publik sebelumnya.
 - **Foto referensi** (opsional): kolom `foto_kartu_pelajar` di `pemilih_dpt` bisa diisi manual lewat proses import lanjutan kalau panitia ingin foto ikut tampil di layar scan (Bagian 3) — tidak wajib untuk MVP.
 - **Minimal 2 kandidat aktif** sebelum fase `sosialisasi` maupun `pemilihan` bisa dibuka (gerbang otomatis, lihat US-08 AC).
+- **Bukti diri hari-H**: saat aktivasi, pemilih wajib mengisi jenis dokumen (KTP/KIA/Kartu Pelajar/SIM/Kartu Keluarga/Lainnya dengan nama bebas) + nomornya -- dipakai panitia check-in untuk tahu di muka apa yang harus dicocokkan, dan ditampilkan sebagai pengingat + menu ubah di dashboard pemilih sebelum check-in hari-H. Pemilih boleh mengubah data ini sendiri kapan saja lewat `/api/akun/bukti-identitas`, termasuk saat hari-H.
 
 ---
 

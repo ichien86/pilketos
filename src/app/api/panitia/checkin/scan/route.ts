@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
     nama: pemilih.nama,
     kelas_atau_pangkat: pemilih.kelas ?? pemilih.pangkat,
     foto_referensi: pemilih.foto_kartu_pelajar,
+    bukti_jenis: pemilih.bukti_jenis === "Lainnya" ? pemilih.bukti_jenis_lainnya : pemilih.bukti_jenis,
+    bukti_nomor: pemilih.bukti_nomor,
     lolosSyarat,
     sudahPunyaSesiHariIni: !!sesiAktifSebelumnya,
     pemilihId,

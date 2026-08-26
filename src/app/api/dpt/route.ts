@@ -98,6 +98,9 @@ export async function POST(req: NextRequest) {
     tanggal_lahir: tanggalLahir,
     foto_kartu_pelajar: null,
     created_at: now,
+    bukti_jenis: null,
+    bukti_jenis_lainnya: null,
+    bukti_nomor: null,
   };
   const defaultPassword = process.env.DEFAULT_PASSWORD ?? "MAN3Byl";
   const akun: AkunPengguna = {

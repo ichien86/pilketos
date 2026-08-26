@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
 import LogoutButton from "@/components/LogoutButton";
+import BuktiIdentitasEditor from "@/components/BuktiIdentitasEditor";
 
 const STATUS_LABEL: Record<string, string> = {
   belum_checkin: "Tunjukkan barcode ini ke panitia pendaftaran untuk check-in",
@@ -130,16 +131,19 @@ export default function PemilihHomePage() {
       </header>
 
       {hariH ? (
-        <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
-          <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
-          {(status === "belum_checkin" || status === "kedaluwarsa") && qrPayload && (
-            <>
-              <DisplayQr payload={qrPayload} />
-              <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
-            </>
-          )}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-        </div>
+        <>
+          <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+            <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
+            {(status === "belum_checkin" || status === "kedaluwarsa") && qrPayload && (
+              <>
+                <DisplayQr payload={qrPayload} />
+                <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
+              </>
+            )}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
+          </div>
+          {(status === "belum_checkin" || status === "kedaluwarsa") && <BuktiIdentitasEditor />}
+        </>
       ) : (
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-2">
           <p className="text-slate-700 font-medium">Belum ada yang perlu dilakukan saat ini.</p>

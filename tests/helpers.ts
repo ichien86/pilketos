@@ -35,6 +35,9 @@ export async function seedPemilih(overrides: Partial<PemilihDpt> = {}) {
     tanggal_lahir: "2008-01-01",
     foto_kartu_pelajar: null,
     created_at: new Date(),
+    bukti_jenis: null,
+    bukti_jenis_lainnya: null,
+    bukti_nomor: null,
     ...overrides,
   };
   await db.collection<PemilihDpt>("pemilih_dpt").insertOne(pemilih);

@@ -22,6 +22,13 @@ export type StatusSesiPemilih =
   | "kedaluwarsa";
 export type StatusBilik = "kosong" | "terisi";
 
+// Jenis dokumen bukti diri yang wajib dibawa pemilih ke TPS hari-H, supaya
+// panitia check-in tahu sebelumnya apa yang harus dicocokkan (lihat
+// panitia/checkin/scan). "Lainnya" dipasangkan dengan bukti_jenis_lainnya
+// (nama dokumen bebas, mis. "Kartu Keluarga sementara").
+export type JenisBuktiIdentitas = "KTP" | "KIA" | "Kartu Pelajar" | "SIM" | "Kartu Keluarga" | "Lainnya";
+export const JENIS_BUKTI_IDENTITAS: JenisBuktiIdentitas[] = ["KTP", "KIA", "Kartu Pelajar", "SIM", "Kartu Keluarga", "Lainnya"];
+
 export interface PemilihDpt {
   _id: string;
   jenis: "siswa" | "guru";
@@ -32,6 +39,12 @@ export interface PemilihDpt {
   tanggal_lahir: string; // ISO date (YYYY-MM-DD)
   foto_kartu_pelajar: string | null;
   created_at: Date;
+  // Diisi wajib saat aktivasi akun (US-02 tambahan); bisa diubah pemilih
+  // sendiri sampai hari-H, sebelum check-in -- null berarti belum diisi
+  // (akun lama yang aktivasi sebelum fitur ini ada).
+  bukti_jenis: JenisBuktiIdentitas | null;
+  bukti_jenis_lainnya: string | null; // wajib diisi kalau bukti_jenis === "Lainnya"
+  bukti_nomor: string | null;
 }
 
 export interface AkunPengguna {

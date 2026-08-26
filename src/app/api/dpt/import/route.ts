@@ -82,6 +82,9 @@ export async function POST(req: NextRequest) {
     tanggal_lahir: row.tanggal_lahir,
     foto_kartu_pelajar: null,
     created_at: now,
+    bukti_jenis: null,
+    bukti_jenis_lainnya: null,
+    bukti_nomor: null,
   }));
   const akunDocs: AkunPengguna[] = pemilihDocs.map((p) => ({
     _id: newId(),

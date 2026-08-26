@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { hashPassword, verifyPassword, setSessionCookie } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
+import { validasiBuktiIdentitas } from "@/lib/bukti-identitas";
 import type { AkunPengguna, PemilihDpt } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest) {
       400
     );
   }
+
+  const bukti = validasiBuktiIdentitas(body);
+  if ("error" in bukti) return errorJson(bukti.error, 400);
 
   const db = await getDb(mode);
   const akun = await db
@@ -73,6 +77,10 @@ export async function POST(req: NextRequest) {
         wajib_ganti_password: false,
       },
     }
+  );
+  await db.collection<PemilihDpt>("pemilih_dpt").updateOne(
+    { _id: pemilih._id },
+    { $set: bukti.data }
   );
 
   const res = NextResponse.json({ ok: true });

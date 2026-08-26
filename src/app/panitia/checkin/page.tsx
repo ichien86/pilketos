@@ -9,6 +9,8 @@ import PanitiaNav from "@/components/PanitiaNav";
 interface ScanResult {
   nama: string;
   kelas_atau_pangkat: string;
+  bukti_jenis: string | null;
+  bukti_nomor: string | null;
   lolosSyarat: boolean;
   sudahPunyaSesiHariIni: boolean;
   pemilihId: string;
@@ -85,6 +87,11 @@ export default function PanitiaCheckinPage() {
             {data.lolosSyarat ? "Memenuhi syarat" : "BELUM memenuhi syarat"}
           </p>
           {data.sudahPunyaSesiHariIni && <p className="text-amber-600">Sudah punya sesi hari ini!</p>}
+          {data.bukti_jenis && (
+            <p className="text-sm text-slate-600">
+              Bukti diri yang dijanjikan: <strong>{data.bukti_jenis}</strong> No. <strong>{data.bukti_nomor}</strong>
+            </p>
+          )}
           <p className="text-xs text-slate-400">Cocokkan wajah/dokumen fisik pemilih sebelum menekan ACC.</p>
           <div className="flex gap-2 pt-2">
             <button onClick={reset} className="flex-1 border rounded-lg py-2">Batal</button>
