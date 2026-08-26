@@ -28,6 +28,8 @@ interface BarisToken {
   sudah_scan_keluar: boolean;
 }
 
+type Filter = "semua" | "sudah_memilih" | "scan_keluar";
+
 const STATUS_LABEL: Record<string, string> = {
   menunggu: "Menunggu bilik",
   di_bilik: "Di bilik",
@@ -45,27 +47,44 @@ export default function RekonsiliasiPage() {
   const [fasePemilihan, setFasePemilihan] = useState<Fase | null>(null);
   const [umumkanBusy, setUmumkanBusy] = useState(false);
   const [umumkanError, setUmumkanError] = useState<string | null>(null);
-  const [daftarToken, setDaftarToken] = useState<BarisToken[] | null>(null);
-  const [daftarBusy, setDaftarBusy] = useState(false);
+  const [daftarFull, setDaftarFull] = useState<BarisToken[] | null>(null);
+  const [daftarFilter, setDaftarFilter] = useState<Filter | null>(null);
+  const [daftarBusy, setDaftarBusy] = useState<Filter | null>(null);
 
   useEffect(() => {
     apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${mode}`).then(setData);
-    setDaftarToken(null); // tutup daftar lama kalau mode (Produksi/Simulasi) diganti
+    // Ganti mode (Produksi/Simulasi) berarti daftar lama sudah tidak relevan.
+    setDaftarFull(null);
+    setDaftarFilter(null);
   }, [mode]);
 
-  async function toggleDaftarToken() {
-    if (daftarToken) {
-      setDaftarToken(null);
+  async function tampilkanDaftar(filter: Filter) {
+    if (daftarFilter === filter) {
+      setDaftarFilter(null);
       return;
     }
-    setDaftarBusy(true);
-    try {
-      const res = await apiFetch<{ daftar: BarisToken[] }>(`/api/admin/rekonsiliasi/daftar-token?mode=${mode}`);
-      setDaftarToken(res.daftar);
-    } finally {
-      setDaftarBusy(false);
+    if (!daftarFull) {
+      setDaftarBusy(filter);
+      try {
+        const res = await apiFetch<{ daftar: BarisToken[] }>(`/api/admin/rekonsiliasi/daftar-token?mode=${mode}`);
+        setDaftarFull(res.daftar);
+      } finally {
+        setDaftarBusy(null);
+      }
     }
+    setDaftarFilter(filter);
   }
+
+  const daftarTampil = (daftarFull ?? []).filter((b) => {
+    if (daftarFilter === "sudah_memilih") return b.status === "sudah_memilih" || b.status === "selesai";
+    if (daftarFilter === "scan_keluar") return b.sudah_scan_keluar;
+    return true;
+  });
+  const DAFTAR_JUDUL: Record<Filter, string> = {
+    semua: "Daftar Token Terbit",
+    sudah_memilih: "Daftar Sudah Memilih",
+    scan_keluar: "Daftar Sudah Scan Keluar",
+  };
 
   async function refreshFasePemilihan() {
     const all = await apiFetch<Fase[]>("/api/fase");
@@ -152,23 +171,23 @@ export default function RekonsiliasiPage() {
             </div>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat label="Token terbit" value={data.total_token_terbit} onClick={toggleDaftarToken} active={!!daftarToken} busy={daftarBusy} />
-            <Stat label="Sudah memilih" value={data.total_sudah_memilih} />
-            <Stat label="Scan keluar" value={data.total_scan_keluar} />
+            <Stat label="Token terbit" value={data.total_token_terbit} onClick={() => tampilkanDaftar("semua")} active={daftarFilter === "semua"} busy={daftarBusy === "semua"} />
+            <Stat label="Sudah memilih" value={data.total_sudah_memilih} onClick={() => tampilkanDaftar("sudah_memilih")} active={daftarFilter === "sudah_memilih"} busy={daftarBusy === "sudah_memilih"} />
+            <Stat label="Scan keluar" value={data.total_scan_keluar} onClick={() => tampilkanDaftar("scan_keluar")} active={daftarFilter === "scan_keluar"} busy={daftarBusy === "scan_keluar"} />
             <Stat label="Total suara" value={data.total_suara} />
           </div>
 
-          {daftarToken && (
+          {daftarFilter && (
             <div className="bg-white rounded-xl shadow overflow-hidden">
               <div className="p-3 border-b flex items-center justify-between">
-                <p className="text-sm font-bold">Daftar Token Terbit ({daftarToken.length})</p>
+                <p className="text-sm font-bold">{DAFTAR_JUDUL[daftarFilter]} ({daftarTampil.length})</p>
                 <p className="text-xs text-slate-400">Bukan pilihan suaranya -- tetap anonim sesuai desain</p>
               </div>
-              {daftarToken.length === 0 ? (
-                <p className="text-sm text-slate-400 p-4 text-center">Belum ada token yang terbit.</p>
+              {daftarTampil.length === 0 ? (
+                <p className="text-sm text-slate-400 p-4 text-center">Belum ada data untuk ditampilkan.</p>
               ) : (
                 <div className="divide-y max-h-[28rem] overflow-y-auto">
-                  {daftarToken.map((b, i) => (
+                  {daftarTampil.map((b, i) => (
                     <div key={i} className="p-3 flex items-center justify-between gap-2 text-sm">
                       <div>
                         <p className="font-medium">{b.nama} <span className="text-slate-400 font-normal">-- {b.nis_nip}</span></p>
