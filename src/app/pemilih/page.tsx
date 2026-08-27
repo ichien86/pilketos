@@ -38,6 +38,7 @@ interface Fase {
 export default function PemilihHomePage() {
   const router = useRouter();
   const [faseAktif, setFaseAktif] = useState<string | null | undefined>(undefined);
+  const [nama, setNama] = useState<string | null>(null);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("belum_checkin");
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,9 @@ export default function PemilihHomePage() {
     apiFetch<Fase[]>("/api/fase").then((all) => {
       if (cancelled) return;
       setFaseAktif(all.find((f) => f.status === "aktif")?.nama_fase ?? null);
+    });
+    apiFetch<{ nama: string | null }>("/api/akun/profil").then((res) => {
+      if (!cancelled) setNama(res.nama);
     });
     return () => {
       cancelled = true;
@@ -122,8 +126,11 @@ export default function PemilihHomePage() {
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-6">
       <header className="flex items-center justify-between pt-2">
-        <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
-        <nav className="flex items-center gap-3 text-sm text-blue-600">
+        <div>
+          <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
+          {nama && <p className="text-sm text-slate-500">Selamat datang, {nama}! Suara Anda menentukan kemajuan.</p>}
+        </div>
+        <nav className="flex items-center gap-3 text-sm text-blue-600 shrink-0">
           {!hariH && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
           {!hariH && <a href="/pemilih/profil" className="hover:underline">Profil</a>}
           <LogoutButton />
