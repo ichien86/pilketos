@@ -89,6 +89,39 @@ describe("import DPT dari Excel (dry-run + commit)", () => {
     expect(count).toBe(0);
   });
 
+  it("menerima berbagai format tanggal lahir yang lazim ditulis manual (DD-MM-YYYY, DD.MM.YYYY, nama bulan ID/EN) dan menolak tanggal yang tidak masuk akal", async () => {
+    const buffer = await buildWorkbook({
+      siswa: [
+        { nis: "F001", nama: "Dash", kelas: "X-1", tgl: "17-08-2008" },
+        { nis: "F002", nama: "Titik", kelas: "X-1", tgl: "17.08.2008" },
+        { nis: "F003", nama: "Bulan ID", kelas: "X-1", tgl: "17 Agustus 2008" },
+        { nis: "F004", nama: "Bulan ID huruf kecil", kelas: "X-1", tgl: "17 agustus 2008" },
+        { nis: "F005", nama: "Bulan EN singkat", kelas: "X-1", tgl: "17 Aug 2008" },
+        { nis: "F006", nama: "Tanggal mustahil", kelas: "X-1", tgl: "31 Februari 2008" },
+        { nis: "F007", nama: "Format tak dikenal", kelas: "X-1", tgl: "2008/08/17" },
+      ],
+    });
+
+    const res = await importDpt(importReq(buffer, "dry-run"));
+    const body = await res.json();
+
+    expect(body.ringkasan.valid).toBe(5); // F001..F005
+    expect(body.ringkasan.error).toBe(2); // F006 (31 Feb) + F007 (format tak dikenal)
+
+    // Semua yang valid harus ternormalisasi ke tanggal yang sama: 2008-08-17
+    const commitRes = await importDpt(importReq(buffer, "commit"));
+    const commitBody = await commitRes.json();
+    expect(commitBody.ringkasan.ter_commit).toBe(5);
+
+    const db = await getDb("prod");
+    const semua = await db
+      .collection<PemilihDpt>("pemilih_dpt")
+      .find({ nis_nip: { $in: ["F001", "F002", "F003", "F004", "F005"] } })
+      .toArray();
+    expect(semua).toHaveLength(5);
+    for (const p of semua) expect(p.tanggal_lahir).toBe("2008-08-17");
+  });
+
   it("commit: menulis pemilih_dpt + akun_pengguna dengan password default & bukti diri masih kosong", async () => {
     const buffer = await buildWorkbook({
       siswa: [{ nis: "S010", nama: "Citra", kelas: "XI-1", tgl: "2009-03-03" }],

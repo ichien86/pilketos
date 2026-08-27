@@ -51,7 +51,7 @@ npm run cron                      # (proses terpisah) sweep TTL bilik/sesi tiap 
 
 ## 3. Prasyarat Data
 
-- **Format Excel DPT** (US-01): sheet `Siswa` dengan kolom header persis `NIS`, `Nama`, `Kelas`, `Tanggal Lahir`; sheet `Guru` dengan `NIP`, `Nama`, `Pangkat`, `Tanggal Lahir`. Tanggal lahir diterima format `YYYY-MM-DD` atau `DD/MM/YYYY`. Baris dengan kolom kosong atau NIS/NIP duplikat ditolak saat commit.
+- **Format Excel DPT** (US-01): sheet `Siswa` dengan kolom header persis `NIS`, `Nama`, `Kelas`, `Tanggal Lahir`; sheet `Guru` dengan `NIP`, `Nama`, `Pangkat`, `Tanggal Lahir`. Kolom tanggal lahir boleh berupa sel tanggal Excel asli, atau teks dalam salah satu format: `YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `DD.MM.YYYY`, atau `DD <Nama Bulan> YYYY` (nama bulan Indonesia atau Inggris, penuh maupun singkatan -- mis. "17 Agustus 2008" atau "17 Aug 2008"). Tanggal yang tidak masuk akal (mis. 31 Februari) maupun format lain di luar daftar ini ditolak sebagai error per baris, bukan ditebak. Baris dengan kolom kosong atau NIS/NIP duplikat ditolak saat commit.
 - **Password default** (`DEFAULT_PASSWORD`, default `MAN3Byl`): sama untuk semua akun pemilih sebelum aktivasi — **wajib** diganti sebelum masa pendataan dimulai kalau nilai default ini pernah bocor ke publik sebelumnya.
 - **Foto referensi** (opsional): kolom `foto_kartu_pelajar` di `pemilih_dpt` bisa diisi manual lewat proses import lanjutan kalau panitia ingin foto ikut tampil di layar scan (Bagian 3) — tidak wajib untuk MVP.
 - **Minimal 2 kandidat aktif** sebelum fase `sosialisasi` maupun `pemilihan` bisa dibuka (gerbang otomatis, lihat US-08 AC).
