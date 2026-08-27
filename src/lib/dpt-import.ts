@@ -50,20 +50,30 @@ function formatIso(y: number, mo: number, d: number): string {
   return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-function normalisasiTanggal(value: unknown): string | null {
+export type HasilTanggal =
+  | { ok: true; iso: string }
+  // "ambigu": pola numerik DD?MM?YYYY (garis miring/strip/titik) di mana hari
+  // DAN bulan sama-sama <=12 (mis. 9/12/1986) punya dua pembacaan yang
+  // sama-sama valid secara kalender (DD/MM vs MM/DD ala Amerika) -- sengaja
+  // DITOLAK, bukan ditebak salah satu, supaya tidak salah cocok diam-diam
+  // dengan tanggal lahir yang diketik pemilih sendiri saat aktivasi (US-02).
+  | { ok: false; alasan: "format" | "kalender" | "ambigu"; mentah?: string };
+
+function normalisasiTanggal(value: unknown): HasilTanggal {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
+    return { ok: true, iso: value.toISOString().slice(0, 10) };
   }
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string") return { ok: false, alasan: "format" };
 
   const trimmed = value.trim();
+  if (!trimmed) return { ok: false, alasan: "format" };
 
-  // YYYY-MM-DD
+  // YYYY-MM-DD -- urutan tetap, tidak pernah ambigu.
   const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (isoMatch) {
     const [, y, mo, d] = isoMatch;
     const yn = Number(y), mon = Number(mo), dn = Number(d);
-    return tanggalValid(yn, mon, dn) ? formatIso(yn, mon, dn) : null;
+    return tanggalValid(yn, mon, dn) ? { ok: true, iso: formatIso(yn, mon, dn) } : { ok: false, alasan: "kalender" };
   }
 
   // DD/MM/YYYY, DD-MM-YYYY, atau DD.MM.YYYY
@@ -71,20 +81,34 @@ function normalisasiTanggal(value: unknown): string | null {
   if (dmyMatch) {
     const [, d, mo, y] = dmyMatch;
     const yn = Number(y), mon = Number(mo), dn = Number(d);
-    return tanggalValid(yn, mon, dn) ? formatIso(yn, mon, dn) : null;
+    if (mon <= 12 && dn <= 12 && mon !== dn) {
+      return { ok: false, alasan: "ambigu", mentah: trimmed };
+    }
+    return tanggalValid(yn, mon, dn) ? { ok: true, iso: formatIso(yn, mon, dn) } : { ok: false, alasan: "kalender" };
   }
 
-  // DD <Nama Bulan> YYYY, mis. "17 Agustus 2008" atau "17 Aug 2008"
+  // DD <Nama Bulan> YYYY, mis. "17 Agustus 2008" atau "17 Aug 2008" -- selalu
+  // tidak ambigu karena bulan disebut namanya, bukan angka.
   const namaBulanMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})$/);
   if (namaBulanMatch) {
     const [, d, bulanRaw, y] = namaBulanMatch;
     const mon = NAMA_BULAN[bulanRaw.toLowerCase()];
-    if (!mon) return null;
+    if (!mon) return { ok: false, alasan: "format" };
     const yn = Number(y), dn = Number(d);
-    return tanggalValid(yn, mon, dn) ? formatIso(yn, mon, dn) : null;
+    return tanggalValid(yn, mon, dn) ? { ok: true, iso: formatIso(yn, mon, dn) } : { ok: false, alasan: "kalender" };
   }
 
-  return null;
+  return { ok: false, alasan: "format" };
+}
+
+function pesanTanggalGagal(hasil: Extract<HasilTanggal, { ok: false }>): string {
+  if (hasil.alasan === "ambigu") {
+    return `Format tanggal lahir "${hasil.mentah}" ambigu (hari dan bulan sama-sama <=12, bisa dibaca DD/MM maupun MM/DD) -- tulis ulang pakai nama bulan (mis. "9 Desember 1986") atau format ISO (1986-12-09)`;
+  }
+  if (hasil.alasan === "kalender") {
+    return "Tanggal lahir tidak valid secara kalender (mis. 31 Februari)";
+  }
+  return "Format tanggal lahir tidak dikenali -- pakai YYYY-MM-DD, DD Nama-Bulan YYYY, atau DD/MM/YYYY yang tidak ambigu";
 }
 
 function cellText(cell: ExcelJS.Cell | undefined): string {
@@ -127,16 +151,22 @@ function parseSheet(
     const nama = namaCol > 0 ? cellText(row.getCell(namaCol)) : "";
     const kelasPangkat = kelasPangkatCol > 0 ? cellText(row.getCell(kelasPangkatCol)) : "";
     const tglRaw = tglCol > 0 ? row.getCell(tglCol).value : null;
-    const tanggalLahir = normalisasiTanggal(tglRaw);
 
-    if (!id || !nama || !kelasPangkat || !tanggalLahir) {
+    if (!id || !nama || !kelasPangkat) {
       error.push({
         jenis,
         baris: rowNumber,
-        pesan: "Kolom wajib kosong atau format tanggal lahir tidak valid",
+        pesan: `Kolom wajib kosong: ${[!id && (jenis === "siswa" ? "NIS" : "NIP"), !nama && "Nama", !kelasPangkat && (jenis === "siswa" ? "Kelas" : "Pangkat")].filter(Boolean).join(", ")}`,
       });
       return;
     }
+    const hasilTanggal = normalisasiTanggal(tglRaw);
+    if (!hasilTanggal.ok) {
+      error.push({ jenis, baris: rowNumber, pesan: pesanTanggalGagal(hasilTanggal) });
+      return;
+    }
+    const tanggalLahir = hasilTanggal.iso;
+
     const key = `${jenis}:${id}`;
     if (seenInFile.has(key)) {
       error.push({ jenis, baris: rowNumber, pesan: `Nomor identitas duplikat di dalam file: ${id}` });

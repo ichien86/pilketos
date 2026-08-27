@@ -197,6 +197,9 @@ export default function AdminDptPage() {
         <p className="text-xs text-slate-400">
           Baris dengan NIS/NIP yang sudah terdaftar (baik duplikat di dalam file maupun sudah ada di database) akan ditolak dan dilaporkan sebagai error -- tidak menimpa data yang sudah ada. Untuk mengoreksi data yang sudah ada, pakai Edit di tabel di bawah.
         </p>
+        <p className="text-xs text-slate-400">
+          Tanggal lahir angka seperti &quot;9/12/1986&quot; (hari &amp; bulan sama-sama &le;12) ambigu dan akan ditolak -- tulis pakai nama bulan (&quot;9 Desember 1986&quot;) atau format ISO (1986-12-09) supaya jelas.
+        </p>
         <input type="file" accept=".xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <div className="flex gap-2">
           <button onClick={() => jalankan("dry-run")} disabled={!file || busy} className="flex-1 border rounded-lg py-2 disabled:opacity-50">

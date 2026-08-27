@@ -67,7 +67,7 @@ describe("import DPT dari Excel (dry-run + commit)", () => {
     const buffer = await buildWorkbook({
       siswa: [
         { nis: "S001", nama: "Andi", kelas: "XII-1", tgl: "2008-01-01" },
-        { nis: "S002", nama: "Budi", kelas: "XII-2", tgl: "01/02/2008" }, // DD/MM/YYYY
+        { nis: "S002", nama: "Budi", kelas: "XII-2", tgl: "25/02/2008" }, // DD/MM/YYYY, hari > 12 jadi tidak ambigu
         { nis: "", nama: "Tanpa NIS", kelas: "XII-3", tgl: "2008-01-01" }, // kolom wajib kosong
         { nis: "S001", nama: "Andi Duplikat", kelas: "XII-4", tgl: "2008-01-01" }, // duplikat NIS dalam file
       ],
@@ -120,6 +120,43 @@ describe("import DPT dari Excel (dry-run + commit)", () => {
       .toArray();
     expect(semua).toHaveLength(5);
     for (const p of semua) expect(p.tanggal_lahir).toBe("2008-08-17");
+  });
+
+  it("menolak tanggal DD/MM/YYYY numerik yang ambigu (hari dan bulan sama-sama <=12), bukan menebak salah satu", async () => {
+    const buffer = await buildWorkbook({
+      siswa: [
+        { nis: "A001", nama: "Ambigu Slash", kelas: "X-1", tgl: "9/12/1986" },
+        { nis: "A002", nama: "Ambigu Strip", kelas: "X-1", tgl: "01-02-2008" },
+        { nis: "A003", nama: "Tidak Ambigu (hari sama bulan)", kelas: "X-1", tgl: "12/12/1986" }, // DD/MM = MM/DD, tidak ambigu
+        { nis: "A004", nama: "Tidak Ambigu (hari > 12)", kelas: "X-1", tgl: "25/12/1986" },
+      ],
+    });
+
+    const res = await importDpt(importReq(buffer, "dry-run"));
+    const body = await res.json();
+
+    expect(body.ringkasan.valid).toBe(2); // A003, A004
+    expect(body.ringkasan.error).toBe(2); // A001, A002
+    const pesanAmbigu = body.ringkasan.detail_error.filter((e: { pesan: string }) => e.pesan.includes("ambigu"));
+    expect(pesanAmbigu).toHaveLength(2);
+    expect(pesanAmbigu.some((e: { pesan: string }) => e.pesan.includes("9/12/1986"))).toBe(true);
+
+    const db = await getDb("prod");
+    const tidakAmbigu = await db
+      .collection<PemilihDpt>("pemilih_dpt")
+      .find({ nis_nip: { $in: ["A003", "A004"] } })
+      .toArray();
+    // dry-run belum menulis apa pun -- pastikan juga hasil parsing tanggalnya benar lewat commit
+    expect(tidakAmbigu).toHaveLength(0);
+
+    await importDpt(importReq(buffer, "commit"));
+    const setelahCommit = await db
+      .collection<PemilihDpt>("pemilih_dpt")
+      .find({ nis_nip: { $in: ["A003", "A004"] } })
+      .toArray();
+    expect(setelahCommit.find((p) => p.nis_nip === "A003")?.tanggal_lahir).toBe("1986-12-12");
+    expect(setelahCommit.find((p) => p.nis_nip === "A004")?.tanggal_lahir).toBe("1986-12-25");
+    expect(await db.collection<PemilihDpt>("pemilih_dpt").findOne({ nis_nip: "A001" })).toBeNull();
   });
 
   it("commit: menulis pemilih_dpt + akun_pengguna dengan password default & bukti diri masih kosong", async () => {
