@@ -33,7 +33,7 @@ const PRINSIP: Prinsip[] = [
   },
   {
     judul: "Adil",
-    penjelasan: "Anda wajib mengenal semua kandidat (menonton video visi-misi) sebelum memilih, dan aturannya sama untuk semua pemilih.",
+    penjelasan: "Nilai kandidat dari visi dan misinya, bukan dari tampilan fisik atau fotonya -- semua kandidat wajib Anda kenal lewat video visi-misi sebelum memilih, dengan aturan yang sama untuk semua pemilih.",
   },
 ];
 

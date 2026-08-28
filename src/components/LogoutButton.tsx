@@ -20,8 +20,15 @@ export default function LogoutButton({ className }: { className?: string }) {
   }
 
   return (
-    <button onClick={keluar} disabled={busy} className={className ?? "text-sm text-red-600 hover:underline disabled:opacity-50"}>
-      Keluar
+    <button
+      onClick={keluar}
+      disabled={busy}
+      className={
+        className ??
+        "inline-flex items-center h-8 px-3 rounded-lg border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+      }
+    >
+      {busy ? "..." : "Keluar"}
     </button>
   );
 }
