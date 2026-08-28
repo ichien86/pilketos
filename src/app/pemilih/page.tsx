@@ -148,6 +148,7 @@ export default function PemilihHomePage() {
                   <>
                     <DisplayQr payload={qrPayload} />
                     <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
+                    <p className="text-xs text-amber-600">Jangan screenshot atau bagikan barcode ini ke orang lain.</p>
                   </>
                 )}
                 {error && <p className="text-red-600 text-sm">{error}</p>}

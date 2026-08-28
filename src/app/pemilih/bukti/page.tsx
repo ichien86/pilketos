@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
 import CandidateAvatar from "@/components/CandidateAvatar";
+import LogoutButton from "@/components/LogoutButton";
 
 interface StatusRes {
   status: string;
@@ -64,7 +65,10 @@ export default function BuktiPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
-      <h1 className="text-lg font-bold pt-2">Bukti Memilih</h1>
+      <header className="flex items-center justify-between pt-2">
+        <h1 className="text-lg font-bold">Bukti Memilih</h1>
+        <LogoutButton />
+      </header>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
@@ -72,6 +76,7 @@ export default function BuktiPage() {
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
           <DisplayQr payload={data.buktiQrPayload} />
           <p className="text-sm text-slate-600">Tunjukkan barcode ini ke panitia di pintu keluar.</p>
+          <p className="text-xs text-amber-600">Jangan screenshot atau bagikan barcode ini ke orang lain.</p>
         </div>
       )}
 
