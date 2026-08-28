@@ -89,7 +89,7 @@ export default function AdminDptPage() {
     const q = cari.trim().toLowerCase();
     return pemilihList.filter((p) => {
       const cocokCari = !q || p.nama.toLowerCase().includes(q) || p.nis_nip.includes(q) || (p.kelas ?? p.pangkat ?? "").toLowerCase().includes(q);
-      const cocokKelas = !filterKelas || p.kelas === filterKelas;
+      const cocokKelas = !filterKelas || (filterKelas === "__guru__" ? p.jenis === "guru" : p.kelas === filterKelas);
       const cocokStatus =
         filterStatus === "semua" ||
         (filterStatus === "belum_aktivasi" && !p.aktivasi_selesai) ||
@@ -331,12 +331,13 @@ export default function AdminDptPage() {
           </button>
         </div>
 
-        {daftarKelas.length > 0 && (
+        {(daftarKelas.length > 0 || pemilihList.some((p) => p.jenis === "guru")) && (
           <select className="border rounded-lg px-3 py-1.5 text-sm" value={filterKelas} onChange={(e) => setFilterKelas(e.target.value)}>
             <option value="">Semua kelas</option>
             {daftarKelas.map((k) => (
               <option key={k} value={k}>{k}</option>
             ))}
+            {pemilihList.some((p) => p.jenis === "guru") && <option value="__guru__">Guru</option>}
           </select>
         )}
 
