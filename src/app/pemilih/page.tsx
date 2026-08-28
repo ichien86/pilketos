@@ -128,7 +128,7 @@ export default function PemilihHomePage() {
       <header className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
-          {nama && <p className="text-sm text-slate-500">Selamat datang, {nama}! Suara Anda menentukan kemajuan.</p>}
+          {nama && <p className="text-sm text-slate-500">Selamat datang, {nama}! Suara Anda menentukan kemajuan organisasi.</p>}
         </div>
         <nav className="flex items-center gap-3 text-sm text-blue-600 shrink-0">
           {!hariH && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
