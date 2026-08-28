@@ -67,7 +67,11 @@ export default function BuktiPage() {
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Bukti Memilih</h1>
-        <LogoutButton />
+        {/* Baru muncul SETELAH discan panitia di pintu keluar -- supaya tidak
+            memberi sinyal "sudah boleh pergi" sebelum proses itu benar-benar
+            terjadi, sambil tetap menyediakan cara keluar untuk perangkat
+            sekolah yang dipakai bergantian setelah pemilih benar-benar selesai. */}
+        {data?.buktiSudahDiscan && <LogoutButton />}
       </header>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}

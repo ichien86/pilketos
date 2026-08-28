@@ -6,7 +6,6 @@ import { apiFetch, ApiError } from "@/lib/client-fetch";
 import QrScanner from "@/components/QrScanner";
 import CandidateAvatar from "@/components/CandidateAvatar";
 import MisiList from "@/components/MisiList";
-import LogoutButton from "@/components/LogoutButton";
 
 interface KandidatRingkas {
   _id: string;
@@ -79,10 +78,7 @@ export default function BilikPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
-      <header className="flex items-center justify-between pt-2">
-        <h1 className="text-lg font-bold">Bilik Suara</h1>
-        <LogoutButton />
-      </header>
+      <h1 className="text-lg font-bold pt-2">Bilik Suara</h1>
 
       {mode === "scan_bilik" && (
         <div className="bg-white rounded-xl shadow p-4 space-y-3">
