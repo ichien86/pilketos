@@ -53,28 +53,29 @@ export default function AktivasiPage() {
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium block mb-1">Username (NIS/NIP)</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <label htmlFor="aktivasi-username" className="text-sm font-medium block mb-1">Username (NIS/NIP)</label>
+            <input id="aktivasi-username" className="w-full border rounded-lg px-3 py-2" value={username} onChange={(e) => setUsername(e.target.value)} required />
           </div>
           <div>
-            <label className="text-sm font-medium block mb-1">Password default (dari panitia)</label>
-            <PasswordInput value={password} onChange={setPassword} required />
+            <label htmlFor="aktivasi-password" className="text-sm font-medium block mb-1">Password default (dari panitia)</label>
+            <PasswordInput id="aktivasi-password" value={password} onChange={setPassword} required />
           </div>
           <div>
-            <label className="text-sm font-medium block mb-1">Tanggal lahir</label>
-            <input type="date" className="w-full border rounded-lg px-3 py-2" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} required />
+            <label htmlFor="aktivasi-tanggal-lahir" className="text-sm font-medium block mb-1">Tanggal lahir</label>
+            <input id="aktivasi-tanggal-lahir" type="date" className="w-full border rounded-lg px-3 py-2" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} required />
           </div>
           <div>
-            <label className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
-            <PasswordInput value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
+            <label htmlFor="aktivasi-password-baru" className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
+            <PasswordInput id="aktivasi-password-baru" value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
           </div>
           <div className="border-t pt-3 space-y-3">
             <p className="text-xs text-slate-500">
               Bukti diri ini WAJIB dibawa fisik ke TPS saat hari-H -- bisa diubah lagi nanti kalau berubah.
             </p>
             <div>
-              <label className="text-sm font-medium block mb-1">Jenis bukti diri</label>
+              <label htmlFor="aktivasi-bukti-jenis" className="text-sm font-medium block mb-1">Jenis bukti diri</label>
               <select
+                id="aktivasi-bukti-jenis"
                 className="w-full border rounded-lg px-3 py-2"
                 value={buktiJenis}
                 onChange={(e) => setBuktiJenis(e.target.value as JenisBuktiIdentitas)}
@@ -88,8 +89,9 @@ export default function AktivasiPage() {
             </div>
             {buktiJenis === "Lainnya" && (
               <div>
-                <label className="text-sm font-medium block mb-1">Nama dokumen</label>
+                <label htmlFor="aktivasi-bukti-jenis-lainnya" className="text-sm font-medium block mb-1">Nama dokumen</label>
                 <input
+                  id="aktivasi-bukti-jenis-lainnya"
                   className="w-full border rounded-lg px-3 py-2"
                   value={buktiJenisLainnya}
                   onChange={(e) => setBuktiJenisLainnya(e.target.value)}
@@ -99,8 +101,9 @@ export default function AktivasiPage() {
               </div>
             )}
             <div>
-              <label className="text-sm font-medium block mb-1">{labelNomorBukti(buktiJenis, buktiJenisLainnya)}</label>
+              <label htmlFor="aktivasi-bukti-nomor" className="text-sm font-medium block mb-1">{labelNomorBukti(buktiJenis, buktiJenisLainnya)}</label>
               <input
+                id="aktivasi-bukti-nomor"
                 className="w-full border rounded-lg px-3 py-2"
                 value={buktiNomor}
                 onChange={(e) => setBuktiNomor(e.target.value)}

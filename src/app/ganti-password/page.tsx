@@ -36,12 +36,12 @@ export default function GantiPasswordPage() {
         <p className="text-sm text-slate-500">Login pertama kali harus mengganti password sementara Anda.</p>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium block mb-1">Password lama/sementara</label>
-            <PasswordInput value={passwordLama} onChange={setPasswordLama} required />
+            <label htmlFor="gp-lama" className="text-sm font-medium block mb-1">Password lama/sementara</label>
+            <PasswordInput id="gp-lama" value={passwordLama} onChange={setPasswordLama} required />
           </div>
           <div>
-            <label className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
-            <PasswordInput value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
+            <label htmlFor="gp-baru" className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
+            <PasswordInput id="gp-baru" value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
           </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white rounded-lg py-2 font-medium disabled:opacity-50">

@@ -56,8 +56,9 @@ export default function LoginPage() {
         </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium block mb-1">Username (NIS/NIP/NIK)</label>
+            <label htmlFor="login-username" className="text-sm font-medium block mb-1">Username (NIS/NIP/NIK)</label>
             <input
+              id="login-username"
               className="w-full border rounded-lg px-3 py-2"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -65,8 +66,8 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium block mb-1">Password</label>
-            <PasswordInput value={password} onChange={setPassword} required />
+            <label htmlFor="login-password" className="text-sm font-medium block mb-1">Password</label>
+            <PasswordInput id="login-password" value={password} onChange={setPassword} required />
           </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <button

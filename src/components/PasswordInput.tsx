@@ -9,13 +9,15 @@ interface PasswordInputProps {
   required?: boolean;
   minLength?: number;
   className?: string;
+  id?: string;
 }
 
-export default function PasswordInput({ value, onChange, placeholder, required, minLength, className }: PasswordInputProps) {
+export default function PasswordInput({ value, onChange, placeholder, required, minLength, className, id }: PasswordInputProps) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
       <input
+        id={id}
         type={show ? "text" : "password"}
         className={className ?? "w-full border rounded-lg px-3 py-2 pr-20"}
         value={value}
