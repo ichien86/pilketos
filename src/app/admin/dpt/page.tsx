@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import { useRole } from "@/lib/use-role";
 import PanitiaNav from "@/components/PanitiaNav";
@@ -44,6 +44,7 @@ export default function AdminDptPage() {
 
   const [pemilihList, setPemilihList] = useState<Pemilih[]>([]);
   const [cari, setCari] = useState("");
+  const cariInputRef = useRef<HTMLInputElement>(null);
   const [filterKelas, setFilterKelas] = useState("");
   const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi">("semua");
   const [tambahForm, setTambahForm] = useState(FORM_KOSONG);
@@ -59,6 +60,24 @@ export default function AdminDptPage() {
 
   useEffect(() => {
     refreshPemilih();
+  }, []);
+
+  // Aksesibilitas: tekan "/" di mana saja di halaman untuk lompat ke kotak
+  // cari, tanpa perlu mengarahkan mouse -- pola umum (mis. GitHub, Slack).
+  // Diabaikan kalau sedang mengetik di field lain supaya tidak mengganggu
+  // input yang kebetulan butuh karakter "/".
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const sedangMengetik =
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT" || target?.isContentEditable;
+      if (sedangMengetik) return;
+      e.preventDefault();
+      cariInputRef.current?.focus();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const daftarKelas = useMemo(() => {
@@ -279,12 +298,20 @@ export default function AdminDptPage() {
       <div className="bg-white rounded-xl shadow p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-bold">Daftar Pemilih ({listTersaring.length}/{pemilihList.length})</h2>
-          <input
-            className="border rounded-lg px-3 py-1.5 text-sm"
-            placeholder="Cari nama/NIS/NIP/kelas..."
-            value={cari}
-            onChange={(e) => setCari(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              ref={cariInputRef}
+              className="border rounded-lg pl-3 pr-7 py-1.5 text-sm"
+              placeholder="Cari nama/NIS/NIP/kelas..."
+              value={cari}
+              onChange={(e) => setCari(e.target.value)}
+            />
+            {!cari && (
+              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 border border-slate-300 rounded px-1 pointer-events-none">
+                /
+              </kbd>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
