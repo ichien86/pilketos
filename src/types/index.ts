@@ -59,14 +59,6 @@ export interface AkunPengguna {
   created_at: Date;
 }
 
-export interface ProfilOpsional {
-  _id: string;
-  pemilih_id: string;
-  alamat: string | null;
-  hobi: string | null;
-  updated_at: Date;
-}
-
 export interface Kandidat {
   _id: string;
   nomor_urut: number;
