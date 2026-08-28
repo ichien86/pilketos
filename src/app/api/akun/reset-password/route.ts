@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
@@ -9,12 +8,12 @@ import type { AkunPengguna, ResetLog } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-function generateTempPassword(): string {
-  return randomBytes(6).toString("base64url"); // ~8 karakter acak, cukup terbaca panitia
-}
-
 // US-04 -- reset password oleh panitia/admin. Mengembalikan pemilih ke status
-// "belum aktivasi" (harus mengulang alur US-02 termasuk cek tanggal lahir).
+// "belum aktivasi" (harus mengulang alur US-02 termasuk cek tanggal lahir),
+// dengan password DIKEMBALIKAN KE DEFAULT SISTEM (bukan dibuat acak) --
+// sama seperti password awal semua akun sebelum pernah aktivasi (DEFAULT_PASSWORD,
+// default "MAN3Byl"), supaya panitia tidak perlu mencatat/membagikan password
+// unik per reset.
 export async function POST(req: NextRequest) {
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["panitia", "admin"])) {
@@ -32,8 +31,8 @@ export async function POST(req: NextRequest) {
     .findOne({ username: usernameAtauNama, role: "pemilih" });
   if (!akun) return errorJson("Akun pemilih tidak ditemukan", 404);
 
-  const tempPassword = generateTempPassword();
-  const hash = await hashPassword(tempPassword);
+  const defaultPassword = process.env.DEFAULT_PASSWORD ?? "MAN3Byl";
+  const hash = await hashPassword(defaultPassword);
 
   await db.collection<AkunPengguna>("akun_pengguna").updateOne(
     { _id: akun._id },
@@ -55,6 +54,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     username: akun.username,
-    password_sementara: tempPassword,
+    password_sementara: defaultPassword,
   });
 }
