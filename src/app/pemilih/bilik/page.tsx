@@ -27,13 +27,48 @@ export default function BilikPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Mendarat di sini bisa juga lewat tombol back browser (mis. dari halaman
+  // Bukti setelah selesai memilih) atau reload di tengah proses, bukan cuma
+  // lewat alur normal dari dashboard -- jadi cek status sesi yang SEBENARNYA
+  // dulu sebelum memutuskan mode awal, daripada asumsi selalu mulai dari
+  // scan bilik. Kirim/klaim ulang tetap ditolak server kalau memang sudah
+  // lewat tahap itu (lihat klaim-bilik/submit route) -- ini murni perbaikan
+  // supaya tidak nyasar ke layar yang salah, bukan pengaman keamanan.
   useEffect(() => {
     const t = localStorage.getItem("pilketos_voteToken");
     if (!t) {
       router.push("/pemilih");
       return;
     }
-    setVoteToken(t);
+    let cancelled = false;
+    async function cekStatus() {
+      try {
+        const res = await apiFetch<{ status: string }>(`/api/vote/${t}/status`);
+        if (cancelled) return;
+        if (res.status === "sudah_memilih" || res.status === "selesai") {
+          router.replace("/pemilih/bukti");
+          return;
+        }
+        if (res.status !== "di_bilik" && res.status !== "menunggu") {
+          router.replace("/pemilih");
+          return;
+        }
+        setVoteToken(t);
+        if (res.status === "di_bilik") {
+          const list = await apiFetch<KandidatRingkas[]>(`/api/vote/${t}/kandidat`);
+          if (!cancelled) {
+            setKandidatList(list);
+            setMode("voting");
+          }
+        }
+      } catch {
+        if (!cancelled) router.replace("/pemilih");
+      }
+    }
+    cekStatus();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   async function handleScanBilik(qrBilikHash: string) {
