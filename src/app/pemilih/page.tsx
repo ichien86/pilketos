@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
 import LogoutButton from "@/components/LogoutButton";
 import BuktiIdentitasEditor from "@/components/BuktiIdentitasEditor";
+import InfoLuberJurdilButton from "@/components/InfoLuberJurdilButton";
 
 const STATUS_LABEL: Record<string, string> = {
   belum_checkin: "Tunjukkan barcode ini ke panitia pendaftaran untuk check-in",
@@ -42,6 +43,7 @@ export default function PemilihHomePage() {
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("belum_checkin");
   const [error, setError] = useState<string | null>(null);
+  const [siapMasuk, setSiapMasuk] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function PemilihHomePage() {
       if (cancelled) return;
       setFaseAktif(all.find((f) => f.status === "aktif")?.nama_fase ?? null);
     });
-    apiFetch<{ nama: string | null }>("/api/akun/profil").then((res) => {
+    apiFetch<{ nama: string | null }>("/api/akun/identitas").then((res) => {
       if (!cancelled) setNama(res.nama);
     });
     return () => {
@@ -130,26 +132,49 @@ export default function PemilihHomePage() {
           <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
           {nama && <p className="text-sm text-slate-500">Selamat datang, {nama}! Suara Anda menentukan kemajuan organisasi.</p>}
         </div>
-        <nav className="flex items-center gap-3 text-sm text-blue-600 shrink-0">
-          {!hariH && <a href="/pemilih/sosialisasi" className="hover:underline">Sosialisasi</a>}
-          {!hariH && <a href="/pemilih/profil" className="hover:underline">Profil</a>}
+        <nav className="flex items-center gap-3 shrink-0">
+          <InfoLuberJurdilButton autoShowOnce />
           <LogoutButton />
         </nav>
       </header>
 
       {hariH ? (
         <>
-          <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
-            <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
-            {(status === "belum_checkin" || status === "kedaluwarsa") && qrPayload && (
-              <>
-                <DisplayQr payload={qrPayload} />
-                <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
-              </>
-            )}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-          </div>
-          {(status === "belum_checkin" || status === "kedaluwarsa") && <BuktiIdentitasEditor />}
+          {status === "belum_checkin" || status === "kedaluwarsa" ? (
+            siapMasuk ? (
+              <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+                <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
+                {qrPayload && (
+                  <>
+                    <DisplayQr payload={qrPayload} />
+                    <p className="text-xs text-slate-400">Barcode berganti otomatis tiap 60 detik</p>
+                  </>
+                )}
+                {error && <p className="text-red-600 text-sm">{error}</p>}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow p-6 text-center space-y-4">
+                <div>
+                  <p className="text-lg font-bold text-slate-800">Saatnya Memilih!</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Datang ke Tempat Pemungutan Suara (TPS) sekarang untuk menggunakan hak pilih Anda.
+                  </p>
+                </div>
+                <BuktiIdentitasEditor />
+                <button
+                  onClick={() => setSiapMasuk(true)}
+                  className="w-full bg-emerald-600 text-white rounded-lg py-2.5 font-medium"
+                >
+                  Masuk ke Tempat Pemungutan Suara &rarr;
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+              <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+            </div>
+          )}
         </>
       ) : (
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-2">

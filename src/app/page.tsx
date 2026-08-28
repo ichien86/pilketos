@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import PasswordInput from "@/components/PasswordInput";
+import InfoLuberJurdilButton from "@/components/InfoLuberJurdilButton";
 
 const ROLE_HOME: Record<string, string> = {
   admin: "/admin/fase",
@@ -48,6 +49,9 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
+      <div className="fixed top-4 right-4 z-10">
+        <InfoLuberJurdilButton />
+      </div>
       <div className="w-full max-w-sm bg-white rounded-xl shadow p-6 space-y-4">
         <div className="text-center space-y-1">
           <Image src="/logo-man3.png" alt="Logo OSIM MAN 3 Boyolali" width={88} height={90} className="mx-auto mb-1" priority />
