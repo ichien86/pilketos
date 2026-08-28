@@ -7,11 +7,12 @@ import { POST as tambahKandidat } from "@/app/api/kandidat/route";
 import { GET as getModeUjiCoba, POST as setModeUjiCoba } from "@/app/api/mode/uji-coba/route";
 import { POST as umumkanHasil } from "@/app/api/fase/pemilihan/umumkan-hasil/route";
 import { GET as getHasil } from "@/app/api/hasil/route";
+import { GET as getProfil, PUT as putProfil } from "@/app/api/akun/profil/route";
 import { signSession } from "@/lib/auth";
 import { newId } from "@/lib/id";
 import { resolveAppMode } from "@/lib/mode";
 import { getDb } from "@/lib/db";
-import type { PemilihDpt, Kandidat, KontrolFase } from "@/types";
+import type { PemilihDpt, Kandidat, KontrolFase, ProfilOpsional } from "@/types";
 
 function adminCookie(): string {
   const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "admin", username: "admin1" });
@@ -19,6 +20,10 @@ function adminCookie(): string {
 }
 function panitiaCookie(): string {
   const token = signSession({ akunId: newId(), pemilihId: null, kandidatId: null, role: "panitia", username: "panitia1" });
+  return `pilketos_session=${token}`;
+}
+function pemilihCookie(pemilihId: string): string {
+  const token = signSession({ akunId: newId(), pemilihId, kandidatId: null, role: "pemilih", username: "uji001" });
   return `pilketos_session=${token}`;
 }
 
@@ -213,5 +218,38 @@ describe("mode uji coba (flag global, bukan fase tersendiri)", () => {
     );
     const hasilBody = await hasilRes.json();
     expect(hasilBody.diumumkan).toBe(true);
+  });
+
+  it("profil opsional pemilih ikut mode aktif -- tidak nyasar ke database lain (regresi bug getDb(\"prod\") hardcode)", async () => {
+    await setModeUjiCoba(modeReq(true));
+    await buka("pendataan");
+
+    const tambahRes = await tambahDpt(dptTambahReq());
+    const { _id: pemilihId } = await tambahRes.json();
+    const cookie = pemilihCookie(pemilihId);
+
+    const putRes = await putProfil(
+      new NextRequest("http://localhost/api/akun/profil", {
+        method: "PUT",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ alamat: "Jl. Uji Coba No. 1", hobi: "Menguji" }),
+      })
+    );
+    expect(putRes.status).toBe(200);
+
+    // Harus masuk ke database sandbox (mode sedang aktif), BUKAN produksi.
+    const sandboxDb = await getDb("simulasi");
+    const diSandbox = await sandboxDb.collection<ProfilOpsional>("profil_opsional").findOne({ pemilih_id: pemilihId });
+    expect(diSandbox?.alamat).toBe("Jl. Uji Coba No. 1");
+
+    const prodDb = await getDb("prod");
+    const diProd = await prodDb.collection<ProfilOpsional>("profil_opsional").findOne({ pemilih_id: pemilihId });
+    expect(diProd).toBeNull();
+
+    const getRes = await getProfil(new NextRequest("http://localhost/api/akun/profil", { headers: { cookie } }));
+    const getBody = await getRes.json();
+    expect(getBody.nama).toBe("Pemilih Uji Coba");
+    expect(getBody.alamat).toBe("Jl. Uji Coba No. 1");
+    expect(getBody.hobi).toBe("Menguji");
   });
 });
