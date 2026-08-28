@@ -27,7 +27,7 @@ export default function PasswordInput({ value, onChange, placeholder, required, 
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        tabIndex={-1}
+        aria-pressed={show}
         className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600 hover:underline"
       >
         {show ? "Sembunyikan" : "Lihat"}
