@@ -79,9 +79,18 @@ export default function PemilihHomePage() {
     }
     refreshBarcode();
     const id = setInterval(refreshBarcode, 60000);
+    // Tab/browser di-background (pindah aplikasi, kunci layar) bikin browser
+    // menunda timer -- begitu kembali terlihat, refresh langsung daripada
+    // menunggu tick 60 detik berikutnya, supaya barcode yang ditampilkan
+    // tidak basi setelah lama tidak dilihat.
+    function onVisible() {
+      if (document.visibilityState === "visible") refreshBarcode();
+    }
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [hariH]);
 
@@ -110,9 +119,14 @@ export default function PemilihHomePage() {
     }
     poll();
     pollingRef.current = setInterval(poll, 3000);
+    function onVisible() {
+      if (document.visibilityState === "visible") poll();
+    }
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
       clearInterval(pollingRef.current);
+      document.removeEventListener("visibilitychange", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hariH]);
