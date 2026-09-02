@@ -112,66 +112,158 @@ export default function BilikPage() {
   if (!voteToken) return null;
 
   return (
-    <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
-      <h1 className="text-lg font-bold pt-2">Bilik Suara</h1>
+    <main className="min-h-screen p-3 sm:p-5 md:p-6 w-full max-w-md sm:max-w-3xl md:max-w-5xl mx-auto space-y-4">
+      <div className="flex items-center justify-between pt-1 pb-2 border-b border-slate-200">
+        <div>
+          <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">Surat Suara Digital</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Pilketos MAN 3 Boyolali — Bilik Suara</p>
+        </div>
+        {mode === "voting" && (
+          <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full">
+            {kandidatList.length} Paslon
+          </span>
+        )}
+      </div>
 
       {mode === "scan_bilik" && (
-        <div className="bg-white rounded-xl shadow p-4 space-y-3">
-          <p className="text-sm text-slate-600">Scan QR yang tertempel di bilik untuk memulai.</p>
-          <QrScanner active onResult={handleScanBilik} wajibKameraBelakang />
+        <div className="bg-white rounded-2xl shadow p-5 max-w-md mx-auto space-y-4 text-center">
+          <p className="text-sm font-medium text-slate-700">Scan QR Code yang tertempel di dinding bilik fisik untuk membuka surat suara.</p>
+          <div className="overflow-hidden rounded-xl">
+            <QrScanner active onResult={handleScanBilik} wajibKameraBelakang />
+          </div>
         </div>
       )}
 
       {mode === "voting" && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">Pilih satu pasangan calon:</p>
-          {kandidatList.map((k) => (
-            <button
-              key={k._id}
-              onClick={() => {
-                setTerpilih(k);
-                setMode("konfirmasi");
-              }}
-              className="w-full text-left bg-white rounded-xl shadow p-5 hover:ring-2 hover:ring-slate-900 space-y-3"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} />
-                  <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} />
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+            <p className="text-xs sm:text-sm font-medium text-blue-900">
+              Silakan ketuk / pilih salah satu pasangan calon di bawah ini:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 items-stretch">
+            {kandidatList.map((k) => (
+              <div
+                key={k._id}
+                onClick={() => {
+                  setTerpilih(k);
+                  setMode("konfirmasi");
+                }}
+                role="button"
+                tabIndex={0}
+                className="flex flex-col justify-between bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-4 sm:p-5 space-y-4"
+              >
+                {/* Header Paslon & Nomor Urut */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center font-black shadow-sm shrink-0">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 -mb-1">No</span>
+                      <span className="text-xl sm:text-2xl leading-none">{k.nomor_urut}</span>
+                    </div>
+                    <div className="flex -space-x-3 shrink-0 pt-0.5">
+                      <div className="ring-2 ring-white rounded-full">
+                        <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} size={48} />
+                      </div>
+                      <div className="ring-2 ring-white rounded-full">
+                        <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} size={48} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Nama Kandidat */}
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Calon Ketua & Wakil</p>
+                    <p className="font-bold text-base sm:text-lg text-slate-900 group-hover:text-blue-950 transition leading-snug">
+                      {k.nama_ketua} &amp; {k.nama_wakil}
+                    </p>
+                  </div>
+
+                  {/* Visi */}
+                  {k.visi && (
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Visi</p>
+                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
+                        &ldquo;{k.visi}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Misi */}
+                  {k.misi && (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Misi</p>
+                      <MisiList misi={k.misi} className="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-1" />
+                    </div>
+                  )}
                 </div>
-                <div className="font-bold text-slate-900">No. {k.nomor_urut} -- {k.nama_ketua} & {k.nama_wakil}</div>
+
+                {/* Tombol Pilih Paslon */}
+                <div className="pt-2">
+                  <div className="w-full bg-slate-900 group-hover:bg-blue-600 text-white font-semibold text-sm sm:text-base py-2.5 rounded-xl text-center shadow transition flex items-center justify-center gap-2">
+                    <span>Pilih Paslon No. {k.nomor_urut}</span>
+                    <span className="text-xs font-normal opacity-75">&rarr;</span>
+                  </div>
+                </div>
               </div>
-              {k.visi && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visi</p>
-                  <p className="text-slate-700 leading-relaxed">{k.visi}</p>
-                </div>
-              )}
-              {k.misi && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Misi</p>
-                  <MisiList misi={k.misi} className="text-slate-700 leading-relaxed" />
-                </div>
-              )}
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       {mode === "konfirmasi" && terpilih && (
-        <div className="bg-white rounded-xl shadow p-6 space-y-4 text-center">
-          <p>Anda memilih:</p>
-          <div className="flex justify-center -space-x-2">
-            <CandidateAvatar nama={terpilih.nama_ketua} foto={terpilih.foto_ketua} size={48} />
-            <CandidateAvatar nama={terpilih.nama_wakil} foto={terpilih.foto_wakil} size={48} />
-          </div>
-          <p className="font-bold text-lg">No. {terpilih.nomor_urut} -- {terpilih.nama_ketua} & {terpilih.nama_wakil}</p>
-          <p className="text-sm text-slate-500">Pilihan tidak bisa diubah setelah dikirim.</p>
-          <div className="flex gap-2">
-            <button onClick={() => setMode("voting")} className="flex-1 border rounded-lg py-2">Batal</button>
-            <button onClick={submitVote} disabled={busy} className="flex-1 bg-slate-900 text-white rounded-lg py-2 disabled:opacity-50">
-              {busy ? "Mengirim..." : "Kirim Suara"}
-            </button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full space-y-4 text-center my-auto">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                Konfirmasi Pilihan Anda
+              </span>
+              <p className="text-sm text-slate-500 mt-2">Pastikan pilihan Anda sudah benar sebelum mengirim suara.</p>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+              <div className="inline-flex w-14 h-14 rounded-2xl bg-slate-900 text-white flex-col items-center justify-center font-black shadow-sm mx-auto">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-1">No</span>
+                <span className="text-2xl leading-none">{terpilih.nomor_urut}</span>
+              </div>
+
+              <div className="flex justify-center -space-x-3">
+                <div className="ring-4 ring-white rounded-full shadow-sm">
+                  <CandidateAvatar nama={terpilih.nama_ketua} foto={terpilih.foto_ketua} size={64} />
+                </div>
+                <div className="ring-4 ring-white rounded-full shadow-sm">
+                  <CandidateAvatar nama={terpilih.nama_wakil} foto={terpilih.foto_wakil} size={64} />
+                </div>
+              </div>
+
+              <div>
+                <p className="font-extrabold text-lg sm:text-xl text-slate-900 leading-tight">
+                  {terpilih.nama_ketua} &amp; {terpilih.nama_wakil}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              ⚠️ <strong>Perhatian:</strong> Pilihan tidak dapat diubah setelah suara dikirim ke kotak suara digital.
+            </p>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setMode("voting")}
+                className="flex-1 border-2 border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl py-2.5 transition"
+              >
+                Batal / Ganti
+              </button>
+              <button
+                type="button"
+                onClick={submitVote}
+                disabled={busy}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl py-2.5 shadow-lg shadow-emerald-600/30 transition disabled:opacity-50"
+              >
+                {busy ? "Mengirim Suara..." : "Ya, Kirim Suara Sah"}
+              </button>
+            </div>
           </div>
         </div>
       )}
