@@ -9,7 +9,6 @@ import type { ProgressPemilih, VideoKampanye } from "@/types";
 export const dynamic = "force-dynamic";
 
 // US-11 -- tercatat otomatis saat video pemilih putar sampai selesai (event "ended").
-// Dapat dilakukan selama masa sosialisasi maupun saat hari-H pemilihan.
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -23,6 +22,7 @@ export async function POST(
     getFase("sosialisasi"),
     getFase("pemilihan"),
   ]);
+
   if (faseSosialisasi.status === "belum_dibuka") {
     return errorJson("Masa sosialisasi belum dibuka", 403);
   }
@@ -32,7 +32,9 @@ export async function POST(
 
   const mode = await resolveAppMode();
   const db = await getDb(mode);
-  const video = await db.collection<VideoKampanye>("video_kampanye").findOne({ _id: params.id, status: "aktif" });
+  const video = await db
+    .collection<VideoKampanye>("video_kampanye")
+    .findOne({ _id: params.id, status: "aktif" });
   if (!video) return errorJson("Video tidak ditemukan", 404);
 
   await db.collection<ProgressPemilih>("progress_pemilih").updateOne(
