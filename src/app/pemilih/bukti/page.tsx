@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-fetch";
 import DisplayQr from "@/components/DisplayQr";
 import CandidateAvatar from "@/components/CandidateAvatar";
@@ -26,11 +27,8 @@ interface HasilRes {
   per_paslon?: HasilPaslon[];
 }
 
-// US-15 -- pulihkan barcode bukti kapan saja pakai voteToken yang sama,
-// murni baca status, tidak pernah membuat suara baru. Setelah discan panitia
-// di pintu keluar, barcode-nya sudah tidak relevan lagi (sekali pakai) --
-// layar berganti jadi ucapan terima kasih, lalu hasil begitu admin umumkan.
 export default function BuktiPage() {
+  const router = useRouter();
   const [data, setData] = useState<StatusRes | null>(null);
   const [hasil, setHasil] = useState<HasilRes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +39,14 @@ export default function BuktiPage() {
       try {
         const res = await apiFetch<StatusRes>("/api/checkin/status");
         if (cancelled) return;
+        if (res.status === "belum_checkin") {
+          router.replace("/pemilih");
+          return;
+        }
+        if (res.status === "menunggu" || res.status === "di_bilik") {
+          router.replace("/pemilih/bilik");
+          return;
+        }
         setData(res);
         if (res.buktiSudahDiscan || res.status === "selesai") {
           const h = await apiFetch<HasilRes>("/api/hasil");
