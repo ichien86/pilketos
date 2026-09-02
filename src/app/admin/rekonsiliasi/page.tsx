@@ -20,9 +20,7 @@ interface Fase {
   hasil_diumumkan: boolean;
 }
 interface BarisToken {
-  nama: string;
-  nis_nip: string;
-  kelas_atau_pangkat: string | null;
+  token: string;
   status: string;
   antre_at: string;
   sudah_scan_keluar: boolean;
@@ -239,9 +237,9 @@ export default function RekonsiliasiPage() {
                     {daftarTampil.map((b, i) => (
                       <div key={i} className="p-3 flex items-center justify-between gap-2 text-sm">
                         <div>
-                          <p className="font-medium">{b.nama} <span className="text-slate-400 font-normal">-- {b.nis_nip}</span></p>
+                          <p className="font-medium font-mono text-xs">{b.token}</p>
                           <p className="text-xs text-slate-400">
-                            {b.kelas_atau_pangkat} &middot; {new Date(b.antre_at).toLocaleString("id-ID")}
+                            {new Date(b.antre_at).toLocaleString("id-ID")}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
