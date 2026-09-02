@@ -1,7 +1,6 @@
 import { unlink } from "fs/promises";
 import { getDb, dropSimulasiDatabase, type DbMode } from "@/lib/db";
 import { ensureIndexes } from "@/lib/indexes";
-import { ensureChecklistSeeded } from "@/lib/checklist";
 import { newId } from "@/lib/id";
 import { uploadUrlToPath } from "@/lib/upload-path";
 import { URUTAN_FASE, type Kandidat, type KontrolFase, type PengaturanMode, type VideoKampanye } from "@/types";
@@ -61,7 +60,6 @@ export async function aktifkanUjiCoba(): Promise<void> {
   await dropSimulasiDatabase();
   const sandboxDb = await getDb("simulasi");
   await ensureIndexes(sandboxDb);
-  await ensureChecklistSeeded(sandboxDb);
 
   const now = new Date();
   const faseDocs: KontrolFase[] = URUTAN_FASE.map((nama) => ({

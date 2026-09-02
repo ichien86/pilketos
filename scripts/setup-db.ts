@@ -1,14 +1,14 @@
 import "./load-env";
 import { getDb } from "../src/lib/db";
 import { ensureIndexes } from "../src/lib/indexes";
-import { ensureChecklistSeeded } from "../src/lib/checklist";
+
 import { URUTAN_FASE, type KontrolFase } from "../src/types";
 import { newId } from "../src/lib/id";
 
 async function main() {
   const db = await getDb("prod");
   await ensureIndexes(db);
-  await ensureChecklistSeeded(db);
+
 
   const existing = await db.collection<KontrolFase>("kontrol_fase").find({}).toArray();
   const existingNama = new Set(existing.map((f) => f.nama_fase));

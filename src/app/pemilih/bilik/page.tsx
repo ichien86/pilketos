@@ -24,8 +24,20 @@ export default function BilikPage() {
   const [mode, setMode] = useState<"scan_bilik" | "voting" | "konfirmasi">("scan_bilik");
   const [kandidatList, setKandidatList] = useState<KandidatRingkas[]>([]);
   const [terpilih, setTerpilih] = useState<KandidatRingkas | null>(null);
+  const [alasanAbstain, setAlasanAbstain] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const AbstainMock: KandidatRingkas = {
+    _id: "abstain",
+    nomor_urut: 0, // Not really used for Abstain
+    nama_ketua: "Abstain",
+    nama_wakil: "Kotak Kosong",
+    foto_ketua: null,
+    foto_wakil: null,
+    visi: null,
+    misi: null,
+  };
 
   // Mendarat di sini bisa juga lewat tombol back browser (mis. dari halaman
   // Bukti setelah selesai memilih) atau reload di tengah proses, bukan cuma
@@ -50,6 +62,7 @@ export default function BilikPage() {
           return;
         }
         if (res.status !== "di_bilik" && res.status !== "menunggu") {
+          localStorage.removeItem("pilketos_voteToken");
           router.replace("/pemilih");
           return;
         }
@@ -62,7 +75,10 @@ export default function BilikPage() {
           }
         }
       } catch {
-        if (!cancelled) router.replace("/pemilih");
+        if (!cancelled) {
+          localStorage.removeItem("pilketos_voteToken");
+          router.replace("/pemilih");
+        }
       }
     }
     cekStatus();
@@ -97,7 +113,10 @@ export default function BilikPage() {
     try {
       await apiFetch<{ buktiToken: string }>(`/api/vote/${voteToken}/submit`, {
         method: "POST",
-        body: JSON.stringify({ kandidatId: terpilih._id }),
+        body: JSON.stringify({
+          kandidatId: terpilih._id,
+          alasanAbstain: terpilih._id === "abstain" ? alasanAbstain : undefined,
+        }),
       });
       // voteToken TIDAK dihapus -- masih dipakai halaman bukti (US-15) untuk
       // query GET /api/vote/[token]/status, endpoint read-only yang tidak
@@ -207,7 +226,44 @@ export default function BilikPage() {
                 </div>
               </div>
             ))}
+            {kandidatList.length === 1 && (
+              <div
+                onClick={() => {
+                  setTerpilih(AbstainMock);
+                  setMode("konfirmasi");
+                }}
+                role="button"
+                tabIndex={0}
+                className="flex flex-col justify-center items-center bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-4 sm:p-5 space-y-4 min-h-[300px]"
+              >
+                <div className="text-center space-y-3">
+                  <div className="w-20 h-20 mx-auto bg-slate-100 rounded-full flex items-center justify-center border-2 border-slate-300 group-hover:bg-slate-200 transition-colors">
+                    <span className="text-4xl">🗳️</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pilihan Alternatif</p>
+                    <p className="font-bold text-lg sm:text-xl text-slate-900 group-hover:text-blue-950 transition leading-snug">
+                      Kotak Kosong (Abstain)
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto">Pilih ini jika Anda memutuskan untuk tidak memilih pasangan calon tunggal.</p>
+                </div>
+              </div>
+            )}
           </div>
+          {kandidatList.length > 1 && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => {
+                  setTerpilih(AbstainMock);
+                  setMode("konfirmasi");
+                }}
+                className="text-sm font-medium text-slate-500 hover:text-slate-800 underline underline-offset-4 decoration-slate-300 hover:decoration-slate-800 transition-colors py-2 px-4 rounded-lg"
+              >
+                Atau pilih Abstain (Kotak Kosong)
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -222,26 +278,57 @@ export default function BilikPage() {
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
-              <div className="inline-flex w-14 h-14 rounded-2xl bg-slate-900 text-white flex-col items-center justify-center font-black shadow-sm mx-auto">
-                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-1">No</span>
-                <span className="text-2xl leading-none">{terpilih.nomor_urut}</span>
-              </div>
+              {terpilih._id === "abstain" ? (
+                <>
+                  <div className="w-16 h-16 mx-auto bg-slate-200 rounded-full flex items-center justify-center border-2 border-slate-300">
+                    <span className="text-3xl">🗳️</span>
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-lg sm:text-xl text-slate-900 leading-tight">
+                      Kotak Kosong (Abstain)
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="inline-flex w-14 h-14 rounded-2xl bg-slate-900 text-white flex-col items-center justify-center font-black shadow-sm mx-auto">
+                    <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-1">No</span>
+                    <span className="text-2xl leading-none">{terpilih.nomor_urut}</span>
+                  </div>
 
-              <div className="flex justify-center -space-x-3">
-                <div className="ring-4 ring-white rounded-full shadow-sm">
-                  <CandidateAvatar nama={terpilih.nama_ketua} foto={terpilih.foto_ketua} size={64} />
-                </div>
-                <div className="ring-4 ring-white rounded-full shadow-sm">
-                  <CandidateAvatar nama={terpilih.nama_wakil} foto={terpilih.foto_wakil} size={64} />
-                </div>
-              </div>
+                  <div className="flex justify-center -space-x-3">
+                    <div className="ring-4 ring-white rounded-full shadow-sm">
+                      <CandidateAvatar nama={terpilih.nama_ketua} foto={terpilih.foto_ketua} size={64} />
+                    </div>
+                    <div className="ring-4 ring-white rounded-full shadow-sm">
+                      <CandidateAvatar nama={terpilih.nama_wakil} foto={terpilih.foto_wakil} size={64} />
+                    </div>
+                  </div>
 
-              <div>
-                <p className="font-extrabold text-lg sm:text-xl text-slate-900 leading-tight">
-                  {terpilih.nama_ketua} &amp; {terpilih.nama_wakil}
-                </p>
-              </div>
+                  <div>
+                    <p className="font-extrabold text-lg sm:text-xl text-slate-900 leading-tight">
+                      {terpilih.nama_ketua} &amp; {terpilih.nama_wakil}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
+
+            {terpilih._id === "abstain" && (
+              <div className="text-left space-y-1">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Alasan Abstain <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  rows={3}
+                  placeholder="Tuliskan alasan Anda..."
+                  value={alasanAbstain}
+                  onChange={(e) => setAlasanAbstain(e.target.value)}
+                />
+                <p className="text-xs text-slate-500">Alasan wajib diisi untuk menganalisis keputusan pemilih.</p>
+              </div>
+            )}
 
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
               ⚠️ <strong>Perhatian:</strong> Pilihan tidak dapat diubah setelah suara dikirim ke kotak suara digital.

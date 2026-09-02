@@ -10,13 +10,6 @@ interface Fase {
   dibuka_at: string | null;
   ditutup_at: string | null;
 }
-interface ChecklistItem {
-  kode: string;
-  label: string;
-  lolos: boolean;
-  catatan: string | null;
-}
-
 const NAMA_LABEL: Record<string, string> = {
   pendataan: "Pendataan",
   pendaftaran_calon: "Pendaftaran Calon",
@@ -24,22 +17,19 @@ const NAMA_LABEL: Record<string, string> = {
   pemilihan: "Pemilihan (Hari-H)",
 };
 
-// US-18 (kontrol fase) + US-21 (checklist Go/No-Go) + mode uji coba (lib/mode.ts).
+// US-18 (kontrol fase) + mode uji coba (lib/mode.ts).
 export default function AdminFasePage() {
   const [fase, setFase] = useState<Fase[]>([]);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [ujiCobaAktif, setUjiCobaAktif] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyMode, setBusyMode] = useState(false);
 
   async function refresh() {
-    const [f, c, m] = await Promise.all([
+    const [f, m] = await Promise.all([
       apiFetch<Fase[]>("/api/fase"),
-      apiFetch<ChecklistItem[]>("/api/simulasi/checklist"),
       apiFetch<{ aktif: boolean }>("/api/mode/uji-coba"),
     ]);
     setFase(f);
-    setChecklist(c);
     setUjiCobaAktif(m.aktif);
   }
 
@@ -161,21 +151,6 @@ export default function AdminFasePage() {
         ))}
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold">Checklist Go/No-Go (sebelum buka fase Pemilihan)</h2>
-          <span className="text-xs text-slate-400">{checklist.filter((c) => c.lolos).length} / {checklist.length} lolos</span>
-        </div>
-        <p className="text-xs text-slate-400 mb-2">Dicentang oleh panitia dari panel mereka -- tampilan di sini baca saja.</p>
-        <div className="bg-white rounded-xl shadow divide-y">
-          {checklist.map((c) => (
-            <div key={c.kode} className="flex items-center gap-3 p-3">
-              <span className={c.lolos ? "text-emerald-600" : "text-slate-400"}>{c.lolos ? "✓" : "○"}</span>
-              <span className={c.lolos ? "text-emerald-700" : "text-slate-700"}>{c.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </main>
   );
 }

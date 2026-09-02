@@ -149,7 +149,8 @@ export interface Bilik {
 
 export interface Suara {
   _id: string;
-  kandidat_id: string;
+  kandidat_id: string; // Bisa "abstain"
+  alasan_abstain?: string | null;
   created_at: Date;
   // SENGAJA tidak ada pemilih_id / sesi_id -- anonimitas (FR-02)
 }
@@ -159,15 +160,6 @@ export interface ResetLog {
   pemilih_id: string;
   direset_oleh: string; // akun_pengguna._id panitia/admin
   created_at: Date;
-}
-
-export interface ChecklistItem {
-  _id: string;
-  kode: string;
-  label: string;
-  lolos: boolean;
-  catatan: string | null;
-  updated_at: Date;
 }
 
 export interface AnomaliScan {

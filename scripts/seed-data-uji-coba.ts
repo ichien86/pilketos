@@ -1,12 +1,11 @@
-﻿import "./load-env";
+import "./load-env";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { getDb, getMongoClient } from "../src/lib/db";
 import { ensureIndexes } from "../src/lib/indexes";
-import { ensureChecklistSeeded } from "../src/lib/checklist";
 import { hashPassword } from "../src/lib/auth";
 import { newId } from "../src/lib/id";
 import { generateVoteToken, generateBuktiToken, hashToken } from "../src/lib/voteToken";
-import { URUTAN_FASE, type AkunPengguna, type Bilik, type Kandidat, type KontrolFase, type PemilihDpt, type ProgressPemilih, type SesiPemilih, type Suara, type ChecklistItem } from "../src/types";
+import { URUTAN_FASE, type AkunPengguna, type Bilik, type Kandidat, type KontrolFase, type PemilihDpt, type ProgressPemilih, type SesiPemilih, type Suara } from "../src/types";
 
 async function main() {
   console.log("===============================================================");
@@ -41,11 +40,9 @@ async function main() {
 
   const db = await getDb("prod");
 
-  console.log("\n[1/6] Inisialisasi Skema Index & Checklist Go/No-Go...");
+  console.log("\n[1/6] Inisialisasi Skema Index...");
   await ensureIndexes(db);
-  await ensureChecklistSeeded(db);
-  console.log("  ✓ Index MongoDB (partial unique index, TTL, hash) berhasil dipasang.");
-  console.log("  ✓ 6 Butir Checklist Go/No-Go disiapkan.");
+  console.log("  ✓ Collection Indexes berhasi dibuat.");
 
   console.log("\n[2/6] Mempersiapkan Kontrol Fase...");
   await db.collection<KontrolFase>("kontrol_fase").deleteMany({});
@@ -339,12 +336,7 @@ async function main() {
   await db.collection<Bilik>("bilik").updateOne({ _id: bilik2Id }, { $set: { status: "terisi", sesi_aktif_id: sesi7Id } });
   console.log("  ✓ 1 Pemilih sedang berada di Bilik 2 (bilik status: 'terisi').");
 
-  // Checklist Go/No-Go ditandai lolos
-  await db.collection<ChecklistItem>("checklist_simulasi").updateMany(
-    {},
-    { $set: { status: "lolos", diuji_pada: sekarang, catatan: "Teruji otomatis via seed simulasi.", updated_at: sekarang } }
-  );
-  console.log("  ✓ Checklist Go/No-Go (6 butir) diverifikasi lolos.");
+
 
   console.log("\n[6/6] Verifikasi Konsistensi & Integritas Data (Rekonsiliasi)...");
   const totalDpt = await db.collection("pemilih_dpt").countDocuments();

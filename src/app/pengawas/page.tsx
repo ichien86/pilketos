@@ -8,11 +8,6 @@ interface Fase {
   nama_fase: string;
   status: "belum_dibuka" | "aktif" | "ditutup";
 }
-interface ChecklistItem {
-  kode: string;
-  label: string;
-  lolos: boolean;
-}
 interface Bilik {
   _id: string;
   nomor_bilik: number;
@@ -41,19 +36,14 @@ const NAMA_LABEL: Record<string, string> = {
 // data (ACC, scan, buka/tutup fase, dll semua ditolak API untuk peran ini).
 export default function PengawasPage() {
   const [fase, setFase] = useState<Fase[]>([]);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [bilik, setBilik] = useState<{ mode: string; bilik: Bilik[] } | null>(null);
   const [rekon, setRekon] = useState<Rekon | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
     try {
-      const [f, c] = await Promise.all([
-        apiFetch<Fase[]>("/api/fase"),
-        apiFetch<ChecklistItem[]>("/api/simulasi/checklist"),
-      ]);
+      const f = await apiFetch<Fase[]>("/api/fase");
       setFase(f);
-      setChecklist(c);
       // Pantauan bilik & rekonsiliasi cuma relevan kalau hari-H/simulasi
       // sedang atau sudah berjalan -- gagal diam-diam kalau belum, wajar.
       apiFetch<{ mode: string; bilik: Bilik[] }>("/api/panitia/bilik-monitor")
@@ -105,17 +95,7 @@ export default function PengawasPage() {
         ))}
       </section>
 
-      <section>
-        <h2 className="font-bold mb-2">Checklist Go/No-Go</h2>
-        <div className="bg-white rounded-xl shadow divide-y">
-          {checklist.map((c) => (
-            <div key={c.kode} className="flex items-center gap-3 p-3">
-              <span className={c.lolos ? "text-emerald-600" : "text-slate-400"}>{c.lolos ? "✓" : "○"}</span>
-              <span className={c.lolos ? "text-emerald-700" : "text-slate-700"}>{c.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+
 
       {bilik && (
         <section>

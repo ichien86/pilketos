@@ -52,11 +52,17 @@ export default function RekonsiliasiPage() {
   const [daftarBusy, setDaftarBusy] = useState<Filter | null>(null);
 
   useEffect(() => {
-    apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${mode}`).then(setData);
-    // Ganti mode (Produksi/Simulasi) berarti daftar lama sudah tidak relevan.
-    setDaftarFull(null);
-    setDaftarFilter(null);
-  }, [mode]);
+    async function load() {
+      const modeData = await apiFetch<{ aktif: boolean }>("/api/mode/uji-coba");
+      const currentMode = modeData.aktif ? "simulasi" : "prod";
+      setMode(currentMode);
+      const rekonData = await apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${currentMode}`);
+      setData(rekonData);
+      setDaftarFull(null);
+      setDaftarFilter(null);
+    }
+    load();
+  }, []);
 
   async function tampilkanDaftar(filter: Filter) {
     if (daftarFilter === filter) {
@@ -119,10 +125,7 @@ export default function RekonsiliasiPage() {
         )}
       </header>
 
-      <div className="flex gap-2">
-        <button onClick={() => setMode("prod")} className={`flex-1 rounded-lg py-2 ${mode === "prod" ? "bg-slate-900 text-white" : "border"}`}>Produksi</button>
-        <button onClick={() => setMode("simulasi")} className={`flex-1 rounded-lg py-2 ${mode === "simulasi" ? "bg-slate-900 text-white" : "border"}`}>Simulasi</button>
-      </div>
+
 
       {isAdmin && fasePemilihan && (
         <div className="bg-white rounded-xl shadow p-4 space-y-2">

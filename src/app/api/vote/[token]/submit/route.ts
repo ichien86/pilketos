@@ -44,13 +44,23 @@ export async function POST(
       if (!sesi || sesi.status !== "di_bilik") throw new Error("SESI_TIDAK_VALID");
       if (isSesiExpired(sesi)) throw new Error("SESI_KEDALUWARSA");
 
-      const kandidat = await db
-        .collection<Kandidat>("kandidat")
-        .findOne({ _id: kandidatId, status: "aktif" }, { session });
-      if (!kandidat) throw new Error("KANDIDAT_TIDAK_VALID");
+      const alasanAbstain = kandidatId === "abstain" ? body?.alasanAbstain : null;
+      if (kandidatId === "abstain" && !alasanAbstain) throw new Error("ALASAN_WAJIB");
+
+      if (kandidatId !== "abstain") {
+        const kandidat = await db
+          .collection<Kandidat>("kandidat")
+          .findOne({ _id: kandidatId, status: "aktif" }, { session });
+        if (!kandidat) throw new Error("KANDIDAT_TIDAK_VALID");
+      }
 
       await db.collection<Suara>("suara").insertOne(
-        { _id: newId(), kandidat_id: kandidatId, created_at: new Date() },
+        {
+          _id: newId(),
+          kandidat_id: kandidatId,
+          ...(kandidatId === "abstain" ? { alasan_abstain: alasanAbstain } : {}),
+          created_at: new Date(),
+        },
         { session }
       );
 
@@ -80,6 +90,7 @@ export async function POST(
     if (msg === "SESI_TIDAK_VALID") return errorJson("Sesi tidak valid untuk submit saat ini", 409);
     if (msg === "SESI_KEDALUWARSA") return errorJson("Sesi sudah kedaluwarsa, ulangi dari check-in", 410);
     if (msg === "KANDIDAT_TIDAK_VALID") return errorJson("Kandidat tidak valid/tidak aktif", 400);
+    if (msg === "ALASAN_WAJIB") return errorJson("Alasan abstain wajib diisi", 400);
     throw e;
   }
 

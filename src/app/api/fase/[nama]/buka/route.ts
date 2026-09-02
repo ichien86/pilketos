@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
 import { getAllFase, resolveAppMode, urutanIndex } from "@/lib/fase-gate";
-import type { ChecklistItem, Kandidat, KontrolFase, StatusFase } from "@/types";
+import type { Kandidat, KontrolFase, StatusFase } from "@/types";
 import { URUTAN_FASE } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -58,14 +58,7 @@ export async function POST(
   const faseDb = await getDb(mode);
 
   if (nama === "pemilihan") {
-    const checklist = await faseDb.collection<ChecklistItem>("checklist_gonogo").find({}).toArray();
-    const belumLolos = checklist.filter((c) => !c.lolos);
-    if (checklist.length === 0 || belumLolos.length > 0) {
-      return errorJson(
-        "Checklist Go/No-Go belum lolos semua -- fase pemilihan tidak bisa dibuka, tidak ada pengecualian",
-        409
-      );
-    }
+
     const kandidatAktifCount = await faseDb.collection<Kandidat>("kandidat").countDocuments({ status: "aktif" });
     if (kandidatAktifCount < 2) {
       return errorJson("Minimal 2 kandidat aktif diperlukan sebelum membuka masa pemilihan", 409);
