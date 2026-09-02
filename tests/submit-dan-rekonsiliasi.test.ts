@@ -100,11 +100,12 @@ describe("submit vote atomik + rekonsiliasi (US-14, US-16, US-17)", () => {
     const daftarBody = await daftarRes.json();
     expect(daftarBody.daftar).toHaveLength(1);
     const baris = daftarBody.daftar[0];
-    expect(baris.nama).toBe(pemilih.nama);
-    expect(baris.nis_nip).toBe(pemilih.nis_nip);
+    expect(baris).toHaveProperty("token");
     expect(baris.status).toBe("selesai");
     expect(baris.sudah_scan_keluar).toBe(true);
-    // Tidak pernah menyertakan kredensial token atau pilihan suaranya.
+    // Tidak pernah menyertakan identitas nama, NIS, kredensial token hash atau pilihan suaranya.
+    expect(baris).not.toHaveProperty("nama");
+    expect(baris).not.toHaveProperty("nis_nip");
     expect(baris).not.toHaveProperty("token_hash");
     expect(baris).not.toHaveProperty("kandidat_dipilih_nomor");
     expect(baris).not.toHaveProperty("barcode_bukti_plain");

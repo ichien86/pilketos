@@ -74,7 +74,17 @@ export default function BuktiPage() {
         {data?.buktiSudahDiscan && <LogoutButton />}
       </header>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && (
+        <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
+          <p className="text-red-600 text-sm">{error}</p>
+          <a
+            href="/pemilih"
+            className="inline-block text-sm text-emerald-600 font-medium hover:underline pt-1"
+          >
+            &larr; Buka Beranda Pemilih untuk Sinkronisasi
+          </a>
+        </div>
+      )}
 
       {data?.buktiQrPayload && !data.buktiSudahDiscan && (
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">

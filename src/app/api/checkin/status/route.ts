@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
   sesi = await expireSesiIfNeeded(db, sesi);
 
   let voteToken: string | null = null;
-  if (sesi.status === "menunggu" || sesi.status === "di_bilik") {
+  if (
+    sesi.status === "menunggu" ||
+    sesi.status === "di_bilik" ||
+    sesi.status === "sudah_memilih" ||
+    sesi.status === "selesai"
+  ) {
     voteToken = sesi.token_plaintext_pending;
     if (voteToken && !sesi.token_delivered_at) {
       await db.collection<SesiPemilih>("sesi_pemilih").updateOne(
