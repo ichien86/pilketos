@@ -1,4 +1,4 @@
-{
+  {
   "name": "pilketos",
   "version": "0.1.0",
   "private": true,
@@ -12,6 +12,7 @@
     "cron": "tsx scripts/cron-sweep.ts",
     "setup-db": "tsx scripts/setup-db.ts",
     "seed-simulasi": "tsx scripts/seed-simulasi.ts",
+    "seed-uji-coba": "tsx scripts/seed-data-uji-coba.ts",
     "create-admin": "tsx scripts/create-admin.ts",
     "create-staff": "tsx scripts/create-staff.ts"
   },

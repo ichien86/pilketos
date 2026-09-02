@@ -36,10 +36,17 @@ interface Fase {
 // (US-24). Fase lain -> tidak ada tugas. `faseAktif` di sini otomatis ikut
 // mode global (produksi/uji coba, lihat resolveAppMode() di server) --
 // halaman ini sendiri tidak perlu tahu sedang mode apa.
+interface Progress {
+  total: number;
+  sudah_ditonton: number;
+  daftar: Array<{ kandidat_id: string; nomor_urut: number; nama_ketua: string; nama_wakil: string; sudah_ditonton: boolean }>;
+}
+
 export default function PemilihHomePage() {
   const router = useRouter();
   const [faseAktif, setFaseAktif] = useState<string | null | undefined>(undefined);
   const [nama, setNama] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("belum_checkin");
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +62,9 @@ export default function PemilihHomePage() {
     apiFetch<{ nama: string | null }>("/api/akun/identitas").then((res) => {
       if (!cancelled) setNama(res.nama);
     });
+    apiFetch<Progress>("/api/progress").then((p) => {
+      if (!cancelled) setProgress(p);
+    }).catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -176,6 +186,32 @@ export default function PemilihHomePage() {
                   </p>
                 </div>
                 <BuktiIdentitasEditor />
+                {progress && progress.total > 0 && progress.sudah_ditonton < progress.total && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-amber-900">Syarat Menonton Video Sosialisasi</p>
+                      <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-medium">
+                        {progress.sudah_ditonton} / {progress.total} Video
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      Anda belum menonton seluruh video profil paslon. Tonton sekarang agar dapat di-ACC panitia saat check-in di TPS.
+                    </p>
+                    <a
+                      href="/pemilih/sosialisasi"
+                      className="inline-block text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded-lg"
+                    >
+                      Tonton Video Sosialisasi Sekarang &rarr;
+                    </a>
+                  </div>
+                )}
+                {progress && progress.total > 0 && progress.sudah_ditonton >= progress.total && (
+                  <div className="text-center pt-1">
+                    <a href="/pemilih/sosialisasi" className="text-xs text-blue-600 hover:underline">
+                      Lihat Ulang Profil & Video Sosialisasi Paslon &rarr;
+                    </a>
+                  </div>
+                )}
                 <button
                   onClick={() => setSiapMasuk(true)}
                   className="w-full bg-emerald-600 text-white rounded-lg py-2.5 font-medium"

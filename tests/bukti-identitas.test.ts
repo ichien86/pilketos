@@ -145,4 +145,80 @@ describe("bukti dukung (bukti diri hari-H) -- diisi wajib saat aktivasi, bisa di
     const res = await getBukti(new NextRequest("http://localhost/api/akun/bukti-identitas"));
     expect(res.status).toBe(403);
   });
+
+  it("aktivasi TETAP bisa dilakukan meskipun masa pendataan sudah ditutup dan pemilihan (hari-H) aktif", async () => {
+    const db = await getDb("prod");
+    await db.collection<KontrolFase>("kontrol_fase").deleteMany({});
+    await db.collection<KontrolFase>("kontrol_fase").insertMany([
+      {
+        _id: newId(),
+        nama_fase: "pendataan",
+        status: "ditutup",
+        dibuka_at: new Date(),
+        ditutup_at: new Date(),
+        kandidat_terkunci: null,
+        hasil_diumumkan: false,
+        hasil_diumumkan_at: null,
+      },
+      {
+        _id: newId(),
+        nama_fase: "pemilihan",
+        status: "aktif",
+        dibuka_at: new Date(),
+        ditutup_at: null,
+        kandidat_terkunci: null,
+        hasil_diumumkan: false,
+        hasil_diumumkan_at: null,
+      },
+    ]);
+
+    const pemilih = await seedPemilih({ nis_nip: "B005", tanggal_lahir: "2008-01-01" });
+    await seedAkunBelumAktivasi(pemilih);
+
+    const res = await aktivasi(
+      aktivasiReq({
+        username: "B005",
+        password: "MAN3Byl",
+        tanggal_lahir: "2008-01-01",
+        password_baru: "passwordbaru123",
+        bukti_jenis: "Kartu Pelajar",
+        bukti_nomor: "KP-005",
+      })
+    );
+    expect(res.status).toBe(200);
+
+    const akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ username: "B005" });
+    expect(akun?.aktivasi_selesai).toBe(true);
+    expect(akun?.wajib_ganti_password).toBe(false);
+  });
+
+  it("aktivasi ditolak jika pendataan belum pernah dibuka", async () => {
+    const db = await getDb("prod");
+    await db.collection<KontrolFase>("kontrol_fase").deleteMany({});
+    await db.collection<KontrolFase>("kontrol_fase").insertOne({
+      _id: newId(),
+      nama_fase: "pendataan",
+      status: "belum_dibuka",
+      dibuka_at: null,
+      ditutup_at: null,
+      kandidat_terkunci: null,
+      hasil_diumumkan: false,
+      hasil_diumumkan_at: null,
+    });
+
+    const pemilih = await seedPemilih({ nis_nip: "B006", tanggal_lahir: "2008-01-01" });
+    await seedAkunBelumAktivasi(pemilih);
+
+    const res = await aktivasi(
+      aktivasiReq({
+        username: "B006",
+        password: "MAN3Byl",
+        tanggal_lahir: "2008-01-01",
+        password_baru: "passwordbaru123",
+        bukti_jenis: "Kartu Pelajar",
+        bukti_nomor: "KP-006",
+      })
+    );
+    expect(res.status).toBe(403);
+  });
 });

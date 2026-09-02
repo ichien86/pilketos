@@ -8,13 +8,21 @@ import type { AkunPengguna, PemilihDpt } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-// US-02 (aktivasi pertama) + US-05 (gerbang penutupan masa pendataan).
+// US-02 (aktivasi pertama / aktivasi ulang setelah reset password).
+// Aktivasi dapat dilakukan sejak masa pendataan dibuka sampai pemilihan selesai.
 export async function POST(req: NextRequest) {
   const mode = await resolveAppMode();
-  const fase = await getFase("pendataan");
-  if (fase.status !== "aktif") {
+  const [fasePendataan, fasePemilihan] = await Promise.all([
+    getFase("pendataan"),
+    getFase("pemilihan"),
+  ]);
+
+  if (fasePendataan.status === "belum_dibuka") {
+    return errorJson("Masa pendataan belum dibuka", 403);
+  }
+  if (fasePemilihan.status === "ditutup") {
     return errorJson(
-      "Masa pendataan sudah ditutup -- aktivasi akun tidak bisa lagi dilakukan, tidak ada pengecualian",
+      "Masa pemilihan sudah selesai -- aktivasi akun tidak dapat dilakukan lagi",
       403
     );
   }
