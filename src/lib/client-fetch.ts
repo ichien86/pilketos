@@ -10,9 +10,10 @@ export async function apiFetch<T = unknown>(
   url: string,
   init?: RequestInit
 ): Promise<T> {
+  const isVoteEndpoint = url.startsWith("/api/vote");
   const res = await fetch(url, {
     ...init,
-    credentials: "include",
+    credentials: init?.credentials ?? (isVoteEndpoint ? "omit" : "include"),
     headers: {
       ...(init?.body && !(init.body instanceof FormData)
         ? { "content-type": "application/json" }

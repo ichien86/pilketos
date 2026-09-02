@@ -118,9 +118,7 @@ export default function BilikPage() {
           alasanAbstain: terpilih._id === "abstain" ? alasanAbstain : undefined,
         }),
       });
-      // voteToken TIDAK dihapus -- masih dipakai halaman bukti (US-15) untuk
-      // query GET /api/vote/[token]/status, endpoint read-only yang tidak
-      // pernah membuat suara baru walau dipanggil berkali-kali.
+      localStorage.removeItem("pilketos_voteToken");
       router.push("/pemilih/bukti");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Gagal submit, coba lagi");

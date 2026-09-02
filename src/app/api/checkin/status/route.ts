@@ -53,7 +53,12 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     status: sesi.status,
-    voteToken, // hanya terisi SEKALI, di respons polling pertama setelah ACC
+    voteToken,
     bilikId: sesi.bilik_id,
+    buktiQrPayload:
+      sesi.status === "sudah_memilih" || sesi.status === "selesai"
+        ? sesi.barcode_bukti_plain
+        : null,
+    buktiSudahDiscan: !!sesi.barcode_used_at,
   });
 }

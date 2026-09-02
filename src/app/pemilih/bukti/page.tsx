@@ -36,18 +36,13 @@ export default function BuktiPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const t = localStorage.getItem("pilketos_voteToken");
-    if (!t) {
-      setError("Token tidak ditemukan di perangkat ini.");
-      return;
-    }
     let cancelled = false;
     async function load() {
       try {
-        const res = await apiFetch<StatusRes>(`/api/vote/${t}/status`);
+        const res = await apiFetch<StatusRes>("/api/checkin/status");
         if (cancelled) return;
         setData(res);
-        if (res.buktiSudahDiscan) {
+        if (res.buktiSudahDiscan || res.status === "selesai") {
           const h = await apiFetch<HasilRes>("/api/hasil");
           if (!cancelled) setHasil(h);
         }
@@ -56,22 +51,20 @@ export default function BuktiPage() {
       }
     }
     load();
-    const id = setInterval(load, 8000);
+    const id = setInterval(load, 5000);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
   }, []);
 
+  const sudahSelesai = Boolean(data?.buktiSudahDiscan || data?.status === "selesai");
+
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto space-y-4">
       <header className="flex items-center justify-between pt-2">
         <h1 className="text-lg font-bold">Bukti Memilih</h1>
-        {/* Baru muncul SETELAH discan panitia di pintu keluar -- supaya tidak
-            memberi sinyal "sudah boleh pergi" sebelum proses itu benar-benar
-            terjadi, sambil tetap menyediakan cara keluar untuk perangkat
-            sekolah yang dipakai bergantian setelah pemilih benar-benar selesai. */}
-        {data?.buktiSudahDiscan && <LogoutButton />}
+        {sudahSelesai && <LogoutButton />}
       </header>
 
       {error && (
@@ -81,12 +74,12 @@ export default function BuktiPage() {
             href="/pemilih"
             className="inline-block text-sm text-emerald-600 font-medium hover:underline pt-1"
           >
-            &larr; Buka Beranda Pemilih untuk Sinkronisasi
+            &larr; Kembali ke Beranda Pemilih
           </a>
         </div>
       )}
 
-      {data?.buktiQrPayload && !data.buktiSudahDiscan && (
+      {data?.buktiQrPayload && !sudahSelesai && (
         <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
           <DisplayQr payload={data.buktiQrPayload} />
           <p className="text-sm text-slate-600">Tunjukkan barcode ini ke panitia di pintu keluar.</p>
@@ -94,7 +87,7 @@ export default function BuktiPage() {
         </div>
       )}
 
-      {data?.buktiSudahDiscan && (!hasil || !hasil.diumumkan) && (
+      {sudahSelesai && (!hasil || !hasil.diumumkan) && (
         <div className="bg-white rounded-xl shadow p-8 text-center space-y-2">
           <p className="text-lg font-bold">Terima kasih sudah berpartisipasi dalam pemilihan!</p>
           <p className="text-sm text-slate-500">Silakan menunggu untuk melihat hasilnya.</p>
