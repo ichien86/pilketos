@@ -47,6 +47,35 @@ export async function GET(req: NextRequest) {
     progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
 
+  // Cek juga sesi_pemilih yang sudah selesai/scan keluar agar status di DPT
+  // selalu sinkron 100% dengan Rekonsiliasi, termasuk data lama.
+  const sesiSelesaiList = await db
+    .collection<import("@/types").SesiPemilih>("sesi_pemilih")
+    .find(
+      {
+        pemilih_id: { $in: list.map((p) => p._id) },
+        $or: [
+          { status: "selesai" },
+          { barcode_used_at: { $ne: null } },
+        ],
+      },
+      { projection: { pemilih_id: 1 } }
+    )
+    .toArray();
+  const sudahSelesaiSet = new Set(sesiSelesaiList.map((s) => s.pemilih_id));
+
+  // Auto-sync ke dokumen pemilih_dpt jika ada sesi keluar yang belum tertandai
+  const toSync = Array.from(sudahSelesaiSet).filter((id) => {
+    const pemilih = list.find((item) => item._id === id);
+    return pemilih && !pemilih.sudah_memilih;
+  });
+  if (toSync.length > 0) {
+    await db.collection<PemilihDpt>("pemilih_dpt").updateMany(
+      { _id: { $in: toSync } },
+      { $set: { sudah_memilih: true } }
+    );
+  }
+
   return NextResponse.json(
     list.map((p) => ({
       _id: p._id,
@@ -60,7 +89,7 @@ export async function GET(req: NextRequest) {
       sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
       sosialisasi_wajib: totalWajibTonton,
       memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
-      sudah_memilih: !!p.sudah_memilih,
+      sudah_memilih: !!p.sudah_memilih || sudahSelesaiSet.has(p._id),
     }))
   );
 }
