@@ -41,6 +41,12 @@ export async function GET(req: NextRequest) {
     progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
 
+  const sesiList = await db
+    .collection<SesiPemilih>("sesi_pemilih")
+    .find({ pemilih_id: { $in: list.map((p) => p._id) }, status: { $in: ["sudah_memilih", "selesai"] } }, { projection: { pemilih_id: 1 } })
+    .toArray();
+  const sudahMemilih = new Set(sesiList.map(s => s.pemilih_id));
+
   return NextResponse.json(
     list.map((p) => ({
       _id: p._id,
@@ -53,9 +59,8 @@ export async function GET(req: NextRequest) {
       aktivasi_selesai: aktivasiByPemilih.get(p._id) ?? false,
       sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
       sosialisasi_wajib: totalWajibTonton,
-      // null = belum relevan (sosialisasi belum dibuka/belum ada paslon
-      // terkunci) -- BUKAN "belum memenuhi", supaya tidak menyesatkan.
       memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
+      sudah_memilih: sudahMemilih.has(p._id),
     }))
   );
 }

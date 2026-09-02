@@ -36,12 +36,14 @@ export async function GET(req: NextRequest) {
   sesi = await expireSesiIfNeeded(db, sesi);
 
   let voteToken: string | null = null;
-  if (sesi.token_plaintext_pending && !sesi.token_delivered_at) {
+  if (sesi.status === "menunggu" || sesi.status === "di_bilik") {
     voteToken = sesi.token_plaintext_pending;
-    await db.collection<SesiPemilih>("sesi_pemilih").updateOne(
-      { _id: sesi._id },
-      { $set: { token_delivered_at: new Date(), token_plaintext_pending: null } }
-    );
+    if (voteToken && !sesi.token_delivered_at) {
+      await db.collection<SesiPemilih>("sesi_pemilih").updateOne(
+        { _id: sesi._id },
+        { $set: { token_delivered_at: new Date() } }
+      );
+    }
   }
 
   return NextResponse.json({

@@ -27,8 +27,13 @@ interface BarisToken {
   antre_at: string;
   sudah_scan_keluar: boolean;
 }
+interface BarisSuara {
+  token: string;
+  pilihan: string;
+  waktu: string;
+}
 
-type Filter = "semua" | "sudah_memilih" | "scan_keluar";
+type Filter = "semua" | "sudah_memilih" | "scan_keluar" | "suara";
 
 const STATUS_LABEL: Record<string, string> = {
   menunggu: "Menunggu bilik",
@@ -48,6 +53,7 @@ export default function RekonsiliasiPage() {
   const [umumkanBusy, setUmumkanBusy] = useState(false);
   const [umumkanError, setUmumkanError] = useState<string | null>(null);
   const [daftarFull, setDaftarFull] = useState<BarisToken[] | null>(null);
+  const [daftarSuara, setDaftarSuara] = useState<BarisSuara[] | null>(null);
   const [daftarFilter, setDaftarFilter] = useState<Filter | null>(null);
   const [daftarBusy, setDaftarBusy] = useState<Filter | null>(null);
 
@@ -59,6 +65,7 @@ export default function RekonsiliasiPage() {
       const rekonData = await apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${currentMode}`);
       setData(rekonData);
       setDaftarFull(null);
+      setDaftarSuara(null);
       setDaftarFilter(null);
     }
     load();
@@ -69,13 +76,29 @@ export default function RekonsiliasiPage() {
       setDaftarFilter(null);
       return;
     }
-    if (!daftarFull) {
-      setDaftarBusy(filter);
-      try {
-        const res = await apiFetch<{ daftar: BarisToken[] }>(`/api/admin/rekonsiliasi/daftar-token?mode=${mode}`);
-        setDaftarFull(res.daftar);
-      } finally {
-        setDaftarBusy(null);
+    if (filter === "suara") {
+      if (!daftarSuara) {
+        setDaftarBusy(filter);
+        try {
+          const res = await apiFetch<{ daftar: BarisSuara[] }>(`/api/admin/rekonsiliasi/daftar-suara?mode=${mode}`);
+          setDaftarSuara(res.daftar);
+        } catch(e) {
+          alert(e instanceof Error ? e.message : "Gagal memuat daftar suara");
+          setDaftarBusy(null);
+          return;
+        } finally {
+          setDaftarBusy(null);
+        }
+      }
+    } else {
+      if (!daftarFull) {
+        setDaftarBusy(filter);
+        try {
+          const res = await apiFetch<{ daftar: BarisToken[] }>(`/api/admin/rekonsiliasi/daftar-token?mode=${mode}`);
+          setDaftarFull(res.daftar);
+        } finally {
+          setDaftarBusy(null);
+        }
       }
     }
     setDaftarFilter(filter);
@@ -90,6 +113,7 @@ export default function RekonsiliasiPage() {
     semua: "Daftar Token Terbit",
     sudah_memilih: "Daftar Sudah Memilih",
     scan_keluar: "Daftar Sudah Scan Keluar",
+    suara: "Daftar Rekaman Suara (Anonim)",
   };
 
   async function refreshFasePemilihan() {
@@ -177,52 +201,81 @@ export default function RekonsiliasiPage() {
             <Stat label="Token terbit" value={data.total_token_terbit} onClick={() => tampilkanDaftar("semua")} active={daftarFilter === "semua"} busy={daftarBusy === "semua"} />
             <Stat label="Sudah memilih" value={data.total_sudah_memilih} onClick={() => tampilkanDaftar("sudah_memilih")} active={daftarFilter === "sudah_memilih"} busy={daftarBusy === "sudah_memilih"} />
             <Stat label="Scan keluar" value={data.total_scan_keluar} onClick={() => tampilkanDaftar("scan_keluar")} active={daftarFilter === "scan_keluar"} busy={daftarBusy === "scan_keluar"} />
-            <Stat label="Total suara" value={data.total_suara} />
+            <Stat label="Total suara" value={data.total_suara} onClick={() => tampilkanDaftar("suara")} active={daftarFilter === "suara"} busy={daftarBusy === "suara"} />
           </div>
 
           {daftarFilter && (
             <div className="bg-white rounded-xl shadow overflow-hidden">
               <div className="p-3 border-b flex items-center justify-between">
-                <p className="text-sm font-bold">{DAFTAR_JUDUL[daftarFilter]} ({daftarTampil.length})</p>
+                <p className="text-sm font-bold">{DAFTAR_JUDUL[daftarFilter]} ({daftarFilter === "suara" ? (daftarSuara ?? []).length : daftarTampil.length})</p>
                 <p className="text-xs text-slate-400">Bukan pilihan suaranya -- tetap anonim sesuai desain</p>
               </div>
-              {daftarTampil.length === 0 ? (
-                <p className="text-sm text-slate-400 p-4 text-center">Belum ada data untuk ditampilkan.</p>
+              
+              {daftarFilter === "suara" ? (
+                (daftarSuara ?? []).length === 0 ? (
+                  <p className="text-sm text-slate-400 p-4 text-center">Belum ada data untuk ditampilkan atau belum diumumkan.</p>
+                ) : (
+                  <div className="divide-y max-h-[28rem] overflow-y-auto">
+                    {(daftarSuara ?? []).map((b, i) => (
+                      <div key={i} className="p-3 flex items-center justify-between gap-2 text-sm">
+                        <div>
+                          <p className="font-medium font-mono text-xs">{b.token}</p>
+                          <p className="text-xs text-slate-400">
+                            {new Date(b.waktu).toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-bold">{b.pilihan}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
-                <div className="divide-y max-h-[28rem] overflow-y-auto">
-                  {daftarTampil.map((b, i) => (
-                    <div key={i} className="p-3 flex items-center justify-between gap-2 text-sm">
-                      <div>
-                        <p className="font-medium">{b.nama} <span className="text-slate-400 font-normal">-- {b.nis_nip}</span></p>
-                        <p className="text-xs text-slate-400">
-                          {b.kelas_atau_pangkat} &middot; {new Date(b.antre_at).toLocaleString("id-ID")}
-                        </p>
+                daftarTampil.length === 0 ? (
+                  <p className="text-sm text-slate-400 p-4 text-center">Belum ada data untuk ditampilkan.</p>
+                ) : (
+                  <div className="divide-y max-h-[28rem] overflow-y-auto">
+                    {daftarTampil.map((b, i) => (
+                      <div key={i} className="p-3 flex items-center justify-between gap-2 text-sm">
+                        <div>
+                          <p className="font-medium">{b.nama} <span className="text-slate-400 font-normal">-- {b.nis_nip}</span></p>
+                          <p className="text-xs text-slate-400">
+                            {b.kelas_atau_pangkat} &middot; {new Date(b.antre_at).toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              b.status === "kedaluwarsa" ? "bg-slate-100 text-slate-500" : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {STATUS_LABEL[b.status] ?? b.status}
+                          </span>
+                          {b.sudah_scan_keluar && <p className="text-xs text-slate-400 mt-1">Sudah scan keluar</p>}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            b.status === "kedaluwarsa" ? "bg-slate-100 text-slate-500" : "bg-emerald-100 text-emerald-700"
-                          }`}
-                        >
-                          {STATUS_LABEL[b.status] ?? b.status}
-                        </span>
-                        {b.sudah_scan_keluar && <p className="text-xs text-slate-400 mt-1">Sudah scan keluar</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow divide-y">
-            {data.per_paslon.map((p) => (
-              <div key={p.kandidat_id} className="p-3 flex items-center justify-between">
-                <span>No. {p.nomor_urut} -- {p.nama}</span>
-                <span className="font-bold">{p.jumlah_suara}</span>
-              </div>
-            ))}
-          </div>
+          {fasePemilihan?.hasil_diumumkan ? (
+            <div className="bg-white rounded-xl shadow divide-y">
+              {data.per_paslon.map((p) => (
+                <div key={p.kandidat_id} className="p-3 flex items-center justify-between">
+                  <span>No. {p.nomor_urut} -- {p.nama}</span>
+                  <span className="font-bold">{p.jumlah_suara}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow p-4 text-center text-slate-500 text-sm">
+              Perolehan suara (rekapitulasi) belum dapat dilihat sebelum hasil diumumkan ke pemilih.
+            </div>
+          )}
         </>
       )}
     </main>

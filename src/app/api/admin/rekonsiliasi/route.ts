@@ -50,13 +50,16 @@ export async function GET(req: NextRequest) {
 
   const perluInvestigasi = totalSudahMemilih !== totalSuara;
 
+  const kontrol = await db.collection("kontrol_fase").findOne({ nama_fase: "pemilihan" });
+  const hasilDiumumkan = kontrol?.hasil_diumumkan === true;
+
   return NextResponse.json({
     mode,
     total_token_terbit: totalTokenTerbit,
     total_sudah_memilih: totalSudahMemilih,
     total_scan_keluar: totalScanKeluar,
     total_suara: totalSuara,
-    per_paslon: perPaslon,
+    per_paslon: hasilDiumumkan ? perPaslon : [],
     perlu_investigasi: perluInvestigasi,
   });
 }

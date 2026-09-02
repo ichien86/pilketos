@@ -26,6 +26,7 @@ interface Pemilih {
   sosialisasi_ditonton: number;
   sosialisasi_wajib: number;
   memenuhi_syarat: boolean | null;
+  sudah_memilih?: boolean;
 }
 
 const FORM_KOSONG = { jenis: "siswa" as "siswa" | "guru", nis_nip: "", nama: "", kelas_pangkat: "", tanggal_lahir: "" };
@@ -46,7 +47,7 @@ export default function AdminDptPage() {
   const [cari, setCari] = useState("");
   const cariInputRef = useRef<HTMLInputElement>(null);
   const [filterKelas, setFilterKelas] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi">("semua");
+  const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi" | "sudah_memilih" | "belum_memilih">("semua");
   const [tambahForm, setTambahForm] = useState(FORM_KOSONG);
   const [tambahError, setTambahError] = useState<string | null>(null);
   const [tambahBusy, setTambahBusy] = useState(false);
@@ -93,13 +94,17 @@ export default function AdminDptPage() {
       const cocokStatus =
         filterStatus === "semua" ||
         (filterStatus === "belum_aktivasi" && !p.aktivasi_selesai) ||
-        (filterStatus === "belum_sosialisasi" && p.memenuhi_syarat === false);
+        (filterStatus === "belum_sosialisasi" && p.memenuhi_syarat === false) ||
+        (filterStatus === "sudah_memilih" && p.sudah_memilih) ||
+        (filterStatus === "belum_memilih" && !p.sudah_memilih);
       return cocokCari && cocokKelas && cocokStatus;
     });
   }, [pemilihList, cari, filterKelas, filterStatus]);
 
   const jumlahBelumAktivasi = useMemo(() => pemilihList.filter((p) => !p.aktivasi_selesai).length, [pemilihList]);
   const jumlahBelumSosialisasi = useMemo(() => pemilihList.filter((p) => p.memenuhi_syarat === false).length, [pemilihList]);
+  const jumlahSudahMemilih = useMemo(() => pemilihList.filter((p) => p.sudah_memilih).length, [pemilihList]);
+  const jumlahBelumMemilih = useMemo(() => pemilihList.filter((p) => !p.sudah_memilih).length, [pemilihList]);
 
   async function jalankan(mode: "dry-run" | "commit") {
     if (!file) return;
@@ -314,7 +319,7 @@ export default function AdminDptPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <button
             onClick={() => setFilterStatus(filterStatus === "belum_aktivasi" ? "semua" : "belum_aktivasi")}
             className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_aktivasi" ? "bg-slate-900 text-white" : "bg-slate-100"}`}
@@ -328,6 +333,20 @@ export default function AdminDptPage() {
           >
             <div className="font-bold text-sm">{jumlahBelumSosialisasi}</div>
             <div>belum sosialisasi</div>
+          </button>
+          <button
+            onClick={() => setFilterStatus(filterStatus === "sudah_memilih" ? "semua" : "sudah_memilih")}
+            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "sudah_memilih" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-800"}`}
+          >
+            <div className="font-bold text-sm">{jumlahSudahMemilih}</div>
+            <div>sudah memilih</div>
+          </button>
+          <button
+            onClick={() => setFilterStatus(filterStatus === "belum_memilih" ? "semua" : "belum_memilih")}
+            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_memilih" ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-800"}`}
+          >
+            <div className="font-bold text-sm">{jumlahBelumMemilih}</div>
+            <div>belum memilih</div>
           </button>
         </div>
 

@@ -47,8 +47,9 @@ export async function POST(
       const alasanAbstain = kandidatId === "abstain" ? body?.alasanAbstain : null;
       if (kandidatId === "abstain" && !alasanAbstain) throw new Error("ALASAN_WAJIB");
 
+      let kandidat: Kandidat | null = null;
       if (kandidatId !== "abstain") {
-        const kandidat = await db
+        kandidat = await db
           .collection<Kandidat>("kandidat")
           .findOne({ _id: kandidatId, status: "aktif" }, { session });
         if (!kandidat) throw new Error("KANDIDAT_TIDAK_VALID");
@@ -72,6 +73,7 @@ export async function POST(
             selesai_at: new Date(),
             barcode_bukti_hash: hashToken(buktiToken),
             barcode_bukti_plain: buktiToken,
+            kandidat_dipilih_nomor: kandidatId === "abstain" ? 0 : (kandidat?.nomor_urut ?? null),
           },
         },
         { session }
