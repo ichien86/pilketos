@@ -20,7 +20,12 @@ export async function GET(req: NextRequest) {
 
   const mode = await resolveAppMode();
   const db = await getDb(mode);
-  const list = await db.collection<PemilihDpt>("pemilih_dpt").find({}).sort({ created_at: 1 }).toArray();
+
+  const list = await db
+    .collection<PemilihDpt>("pemilih_dpt")
+    .find({}, { sort: { nama: 1 } })
+    .toArray();
+
   const akunList = await db
     .collection<AkunPengguna>("akun_pengguna")
     .find({ pemilih_id: { $in: list.map((p) => p._id) } }, { projection: { pemilih_id: 1, aktivasi_selesai: 1 } })
@@ -32,17 +37,15 @@ export async function GET(req: NextRequest) {
   // cuma dihitung sekaligus untuk semua pemilih di sini).
   const kandidatWajib = await kandidatWajibDitonton(db);
   const totalWajibTonton = kandidatWajib.length;
+  const idKandidatWajib = new Set(kandidatWajib);
+
   const progressList = await db
     .collection<ProgressPemilih>("progress_pemilih")
     .find({ pemilih_id: { $in: list.map((p) => p._id) } })
     .toArray();
-  const idKandidatWajib = new Set(kandidatWajib);
   const progressByPemilih = new Map(
     progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
-
-  // Status sudah_memilih sekarang diambil langsung dari flag pemilih_dpt
-  // yang diset saat scan keluar (usulan pengguna untuk kerahasiaan timing)
 
   return NextResponse.json(
     list.map((p) => ({
@@ -57,7 +60,7 @@ export async function GET(req: NextRequest) {
       sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
       sosialisasi_wajib: totalWajibTonton,
       memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
-      sudah_memilih: !!(p as any).sudah_memilih,
+      sudah_memilih: !!p.sudah_memilih,
     }))
   );
 }
