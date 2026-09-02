@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, type DbMode } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
-import type { PemilihDpt, SesiPemilih } from "@/types";
+import type { SesiPemilih } from "@/types";
 
 export const dynamic = "force-dynamic";
 
