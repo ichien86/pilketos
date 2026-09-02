@@ -205,22 +205,38 @@ export default function PemilihHomePage() {
                     </a>
                   </div>
                 ) : (
-                  <>
-                    <button
-                      onClick={() => setSiapMasuk(true)}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 font-medium shadow-sm transition"
-                    >
-                      Masuk ke Tempat Pemungutan Suara &rarr;
-                    </button>
-                    {progress && progress.total > 0 && (
-                      <div className="text-center pt-1">
-                        <a href="/pemilih/sosialisasi" className="text-xs text-blue-600 hover:underline">
-                          Lihat Ulang Profil & Video Sosialisasi Paslon &rarr;
-                        </a>
-                      </div>
-                    )}
-                  </>
+                  progress && progress.total > 0 && (
+                    <div className="text-center pt-1">
+                      <a href="/pemilih/sosialisasi" className="text-xs text-blue-600 hover:underline">
+                        Lihat Ulang Profil & Video Sosialisasi Paslon &rarr;
+                      </a>
+                    </div>
+                  )
                 )}
+
+                {(() => {
+                  const belumLolos = progress && progress.total > 0 && progress.sudah_ditonton < progress.total;
+                  return (
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => setSiapMasuk(true)}
+                        disabled={!!belumLolos}
+                        className={`w-full rounded-lg py-2.5 font-medium shadow-sm transition ${
+                          belumLolos
+                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                        }`}
+                      >
+                        Masuk ke Tempat Pemungutan Suara &rarr;
+                      </button>
+                      {belumLolos && (
+                        <p className="text-xs text-slate-400 text-center">
+                          (Tombol aktif setelah semua video sosialisasi selesai ditonton)
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )
           ) : (
