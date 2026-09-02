@@ -186,38 +186,41 @@ export default function PemilihHomePage() {
                   </p>
                 </div>
                 <BuktiIdentitasEditor />
-                {progress && progress.total > 0 && progress.sudah_ditonton < progress.total && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-2">
+                {progress && progress.total > 0 && progress.sudah_ditonton < progress.total ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-amber-900">Syarat Menonton Video Sosialisasi</p>
-                      <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-medium">
+                      <p className="text-sm font-bold text-amber-900">Belum Memenuhi Syarat Memilih</p>
+                      <span className="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-semibold">
                         {progress.sudah_ditonton} / {progress.total} Video
                       </span>
                     </div>
                     <p className="text-xs text-amber-800 leading-relaxed">
-                      Anda belum menonton seluruh video profil paslon. Tonton sekarang agar dapat di-ACC panitia saat check-in di TPS.
+                      Anda belum dapat masuk ke antrean TPS karena belum menonton seluruh video profil & visi-misi paslon. Silakan selesaikan tontonan video terlebih dahulu:
                     </p>
                     <a
                       href="/pemilih/sosialisasi"
-                      className="inline-block text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300 px-3 py-1.5 rounded-lg"
+                      className="block text-center text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 py-2.5 rounded-lg shadow-sm transition"
                     >
                       Tonton Video Sosialisasi Sekarang &rarr;
                     </a>
                   </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setSiapMasuk(true)}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 font-medium shadow-sm transition"
+                    >
+                      Masuk ke Tempat Pemungutan Suara &rarr;
+                    </button>
+                    {progress && progress.total > 0 && (
+                      <div className="text-center pt-1">
+                        <a href="/pemilih/sosialisasi" className="text-xs text-blue-600 hover:underline">
+                          Lihat Ulang Profil & Video Sosialisasi Paslon &rarr;
+                        </a>
+                      </div>
+                    )}
+                  </>
                 )}
-                {progress && progress.total > 0 && progress.sudah_ditonton >= progress.total && (
-                  <div className="text-center pt-1">
-                    <a href="/pemilih/sosialisasi" className="text-xs text-blue-600 hover:underline">
-                      Lihat Ulang Profil & Video Sosialisasi Paslon &rarr;
-                    </a>
-                  </div>
-                )}
-                <button
-                  onClick={() => setSiapMasuk(true)}
-                  className="w-full bg-emerald-600 text-white rounded-lg py-2.5 font-medium"
-                >
-                  Masuk ke Tempat Pemungutan Suara &rarr;
-                </button>
               </div>
             )
           ) : (

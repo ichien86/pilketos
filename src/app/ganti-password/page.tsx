@@ -9,12 +9,19 @@ export default function GantiPasswordPage() {
   const router = useRouter();
   const [passwordLama, setPasswordLama] = useState("");
   const [passwordBaru, setPasswordBaru] = useState("");
+  const [konfirmasiPasswordBaru, setKonfirmasiPasswordBaru] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (passwordBaru !== konfirmasiPasswordBaru) {
+      setError("Password baru dan konfirmasi password tidak sama");
+      return;
+    }
+
     setLoading(true);
     try {
       await apiFetch("/api/akun/ganti-password", {
@@ -42,6 +49,10 @@ export default function GantiPasswordPage() {
           <div>
             <label htmlFor="gp-baru" className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
             <PasswordInput id="gp-baru" value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
+          </div>
+          <div>
+            <label htmlFor="gp-konfirmasi" className="text-sm font-medium block mb-1">Ulangi password baru</label>
+            <PasswordInput id="gp-konfirmasi" value={konfirmasiPasswordBaru} onChange={setKonfirmasiPasswordBaru} required minLength={8} />
           </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white rounded-lg py-2 font-medium disabled:opacity-50">

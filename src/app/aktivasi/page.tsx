@@ -13,6 +13,7 @@ export default function AktivasiPage() {
   const [password, setPassword] = useState("");
   const [tanggalLahir, setTanggalLahir] = useState("");
   const [passwordBaru, setPasswordBaru] = useState("");
+  const [konfirmasiPasswordBaru, setKonfirmasiPasswordBaru] = useState("");
   const [buktiJenis, setBuktiJenis] = useState<JenisBuktiIdentitas | "">("");
   const [buktiJenisLainnya, setBuktiJenisLainnya] = useState("");
   const [buktiNomor, setBuktiNomor] = useState("");
@@ -22,6 +23,12 @@ export default function AktivasiPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (passwordBaru !== konfirmasiPasswordBaru) {
+      setError("Password baru dan konfirmasi password tidak sama");
+      return;
+    }
+
     setLoading(true);
     try {
       await apiFetch("/api/akun/aktivasi", {
@@ -67,6 +74,10 @@ export default function AktivasiPage() {
           <div>
             <label htmlFor="aktivasi-password-baru" className="text-sm font-medium block mb-1">Password baru (min. 8 karakter)</label>
             <PasswordInput id="aktivasi-password-baru" value={passwordBaru} onChange={setPasswordBaru} required minLength={8} />
+          </div>
+          <div>
+            <label htmlFor="aktivasi-password-konfirmasi" className="text-sm font-medium block mb-1">Ulangi password baru</label>
+            <PasswordInput id="aktivasi-password-konfirmasi" value={konfirmasiPasswordBaru} onChange={setKonfirmasiPasswordBaru} required minLength={8} />
           </div>
           <div className="border-t pt-3 space-y-3">
             <p className="text-xs text-slate-500">
