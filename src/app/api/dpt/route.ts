@@ -5,7 +5,7 @@ import { getSessionFromRequest, hashPassword, requireRole } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { kandidatWajibDitonton } from "@/lib/eligibility";
 import { newId } from "@/lib/id";
-import type { AkunPengguna, PemilihDpt, ProgressPemilih, SesiPemilih } from "@/types";
+import type { AkunPengguna, PemilihDpt, ProgressPemilih } from "@/types";
 
 export const dynamic = "force-dynamic";
 
