@@ -61,6 +61,8 @@ export default function AdminDptPage() {
 
   useEffect(() => {
     refreshPemilih();
+    const id = setInterval(refreshPemilih, 5000);
+    return () => clearInterval(id);
   }, []);
 
   // Aksesibilitas: tekan "/" di mana saja di halaman untuk lompat ke kotak
