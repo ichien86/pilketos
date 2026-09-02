@@ -48,5 +48,10 @@ export async function POST(req: NextRequest) {
     { _id: sesi._id },
     { $set: { barcode_used_at: new Date(), status: "selesai" } }
   );
+
+  await db.collection<import("@/types").PemilihDpt>("pemilih_dpt").updateOne(
+    { _id: sesi.pemilih_id },
+    { $set: { sudah_memilih: true } }
+  );
   return NextResponse.json({ berhasil: true });
 }

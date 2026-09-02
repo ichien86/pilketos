@@ -41,11 +41,8 @@ export async function GET(req: NextRequest) {
     progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
 
-  const sesiList = await db
-    .collection<SesiPemilih>("sesi_pemilih")
-    .find({ pemilih_id: { $in: list.map((p) => p._id) }, status: { $in: ["sudah_memilih", "selesai"] } }, { projection: { pemilih_id: 1 } })
-    .toArray();
-  const sudahMemilih = new Set(sesiList.map(s => s.pemilih_id));
+  // Status sudah_memilih sekarang diambil langsung dari flag pemilih_dpt
+  // yang diset saat scan keluar (usulan pengguna untuk kerahasiaan timing)
 
   return NextResponse.json(
     list.map((p) => ({
@@ -60,7 +57,7 @@ export async function GET(req: NextRequest) {
       sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
       sosialisasi_wajib: totalWajibTonton,
       memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
-      sudah_memilih: sudahMemilih.has(p._id),
+      sudah_memilih: !!(p as any).sudah_memilih,
     }))
   );
 }

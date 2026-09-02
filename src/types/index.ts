@@ -37,6 +37,7 @@ export interface PemilihDpt {
   kelas: string | null; // siswa
   pangkat: string | null; // guru
   tanggal_lahir: string; // ISO date (YYYY-MM-DD)
+  sudah_memilih?: boolean | null;
   foto_kartu_pelajar: string | null;
   created_at: Date;
   // Diisi wajib saat aktivasi akun (US-02 tambahan); bisa diubah pemilih
