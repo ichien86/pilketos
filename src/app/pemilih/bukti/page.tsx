@@ -50,16 +50,19 @@ export default function BuktiPage() {
           return;
         }
         setData(res);
-        if (res.buktiSudahDiscan || res.status === "selesai") {
+        // Selalu cek /api/hasil secara real-time tanpa harus menunggu scan pintu keluar
+        try {
           const h = await apiFetch<HasilRes>("/api/hasil");
-          if (!cancelled) setHasil(h);
+          if (!cancelled && h) setHasil(h);
+        } catch {
+          // Abaikan jika belum ada hasil
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Gagal memuat status");
       }
     }
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 4000);
     return () => {
       cancelled = true;
       clearInterval(id);

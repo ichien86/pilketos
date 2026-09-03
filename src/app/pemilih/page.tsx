@@ -7,6 +7,8 @@ import DisplayQr from "@/components/DisplayQr";
 import LogoutButton from "@/components/LogoutButton";
 import BuktiIdentitasEditor from "@/components/BuktiIdentitasEditor";
 import InfoLuberJurdilButton from "@/components/InfoLuberJurdilButton";
+import CandidateAvatar from "@/components/CandidateAvatar";
+import HasilCharts from "@/components/HasilCharts";
 
 const STATUS_LABEL: Record<string, string> = {
   belum_checkin: "Tunjukkan barcode ini ke panitia pendaftaran untuk check-in",
@@ -29,6 +31,24 @@ interface Fase {
   status: "belum_dibuka" | "aktif" | "ditutup";
 }
 
+interface HasilPaslon {
+  kandidat_id: string;
+  nomor_urut: number;
+  nama_ketua: string;
+  nama_wakil: string;
+  foto_ketua: string | null;
+  foto_wakil: string | null;
+  jumlah_suara: number;
+}
+
+interface HasilRes {
+  diumumkan: boolean;
+  diumumkan_at?: string | null;
+  total_suara?: number;
+  jumlah_abstain?: number;
+  per_paslon?: HasilPaslon[];
+}
+
 // Dashboard tunggal yang menyesuaikan diri ke tahapan yang sedang berjalan --
 // pemilih tidak perlu memilih menu sendiri. Sosialisasi aktif -> alihkan ke
 // materi kampanye. Pemilihan aktif -> ikuti status sesi hari-H (barcode
@@ -49,9 +69,39 @@ export default function PemilihHomePage() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("belum_checkin");
+  const [hasil, setHasil] = useState<HasilRes | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [siapMasuk, setSiapMasuk] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Polling real-time pengumuman hasil perolehan suara (tanpa harus refresh manual)
+  useEffect(() => {
+    let cancelled = false;
+    async function checkHasil() {
+      try {
+        const res = await apiFetch<HasilRes>("/api/hasil");
+        if (cancelled) return;
+        if (res && res.diumumkan) {
+          setHasil(res);
+        } else {
+          setHasil(null);
+        }
+      } catch {
+        // Biarkan jika belum diumumkan
+      }
+    }
+    checkHasil();
+    const id = setInterval(checkHasil, 3000);
+    function onVisible() {
+      if (document.visibilityState === "visible") checkHasil();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,10 +200,12 @@ export default function PemilihHomePage() {
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-md mx-auto space-y-6">
+    <main className={`min-h-screen p-3.5 sm:p-5 mx-auto space-y-5 transition-all ${hasil?.diumumkan ? "max-w-4xl" : "max-w-md"}`}>
       <header className="flex items-center justify-between pt-2">
         <div>
-          <h1 className="text-lg font-bold">{hariH ? "Check-in Pemilih" : "Beranda Pemilih"}</h1>
+          <h1 className="text-lg font-bold">
+            {hasil?.diumumkan ? "Hasil Pemilihan OSIM" : hariH ? "Check-in Pemilih" : "Beranda Pemilih"}
+          </h1>
           {nama && <p className="text-sm text-slate-500">Selamat datang, {nama}! Suara Anda menentukan kemajuan organisasi.</p>}
         </div>
         <nav className="flex items-center gap-3 shrink-0">
@@ -162,7 +214,102 @@ export default function PemilihHomePage() {
         </nav>
       </header>
 
-      {hariH ? (
+      {hasil?.diumumkan ? (
+        <div className="space-y-4 sm:space-y-6">
+          {/* Banner Pengumuman Resmi */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-5 sm:p-6 text-center shadow-lg space-y-2 border border-blue-700/40">
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-300 bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-500/40">
+              Pengumuman Resmi
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+              Hasil Pemilihan Ketua &amp; Wakil Ketua OSIM
+            </h2>
+            <p className="text-xs sm:text-sm text-blue-200">
+              MAN 3 Boyolali — Masa Bakti 2026/2027
+            </p>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs bg-white/15 px-3 py-1 rounded-full font-semibold">
+                Total Suara Sah: {hasil.total_suara?.toLocaleString("id-ID") ?? 0} Suara
+              </span>
+              {hasil.diumumkan_at && (
+                <span className="text-[11px] text-blue-200 bg-black/20 px-2.5 py-1 rounded-full">
+                  Diumumkan: {new Date(hasil.diumumkan_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Visualisasi Grafik Batang & Donat SVG */}
+          {hasil.per_paslon && hasil.per_paslon.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+              <HasilCharts
+                perPaslon={hasil.per_paslon}
+                jumlahAbstain={hasil.jumlah_abstain ?? 0}
+                totalSuara={hasil.total_suara ?? 0}
+              />
+            </div>
+          )}
+
+          {/* Rincian Perolehan Suara Paslon */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-1">
+              Rincian Perolehan Suara
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {hasil.per_paslon?.map((p) => {
+                const total = hasil.total_suara ?? 0;
+                const persen = total > 0 ? ((p.jumlah_suara / total) * 100).toFixed(1) : "0.0";
+                return (
+                  <div
+                    key={p.kandidat_id}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3.5"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-black flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[8px] uppercase tracking-wider text-slate-400 -mb-1">No</span>
+                      <span className="text-lg leading-none">{p.nomor_urut}</span>
+                    </div>
+                    <div className="flex -space-x-2 shrink-0">
+                      <div className="ring-2 ring-white rounded-full">
+                        <CandidateAvatar nama={p.nama_ketua} foto={p.foto_ketua} size={40} />
+                      </div>
+                      <div className="ring-2 ring-white rounded-full">
+                        <CandidateAvatar nama={p.nama_wakil} foto={p.foto_wakil} size={40} />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-sm text-slate-900 truncate">
+                        {p.nama_ketua} &amp; {p.nama_wakil}
+                      </p>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-sm font-black text-blue-600">{p.jumlah_suara} Suara</span>
+                        <span className="text-xs text-slate-400 font-medium">({persen}%)</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Suara Abstain jika ada */}
+              {typeof hasil.jumlah_abstain === "number" && hasil.jumlah_abstain > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-600 font-black flex items-center justify-center shrink-0 text-xl">
+                    🗳️
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-slate-900">Abstain / Suara Kosong</p>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                      <span className="text-sm font-black text-slate-600">{hasil.jumlah_abstain} Suara</span>
+                      <span className="text-xs text-slate-400 font-medium">
+                        ({hasil.total_suara ? ((hasil.jumlah_abstain / hasil.total_suara) * 100).toFixed(1) : "0.0"}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : hariH ? (
         <>
           {status === "belum_checkin" || status === "kedaluwarsa" ? (
             siapMasuk ? (
