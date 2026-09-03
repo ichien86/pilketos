@@ -6,7 +6,7 @@ import { resolveHariHMode, FaseGateError } from "@/lib/fase-gate";
 import { hitungLolosSyarat } from "@/lib/eligibility";
 import { generateVoteToken, hashToken } from "@/lib/voteToken";
 import { newId } from "@/lib/id";
-import type { AkunPengguna, SesiPemilih } from "@/types";
+import type { AkunPengguna, SesiPemilih, Bilik } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +77,14 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  // voteToken dikirim di sini untuk ditampilkan panitia sbg QR fallback, DAN
-  // tersedia lewat polling /api/checkin/status (keputusan desain #1) untuk HP pemilih.
-  return NextResponse.json({ voteToken });
+  const bilikList = await db.collection<Bilik>("bilik").find({}).sort({ nomor_bilik: 1 }).toArray();
+
+  return NextResponse.json({
+    voteToken,
+    bilik: bilikList.map((b) => ({
+      _id: b._id,
+      nomor_bilik: b.nomor_bilik,
+      status: b.status,
+    })),
+  });
 }
