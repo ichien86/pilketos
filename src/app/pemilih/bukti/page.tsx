@@ -24,8 +24,10 @@ interface HasilPaslon {
 interface HasilRes {
   diumumkan: boolean;
   total_suara?: number;
+  jumlah_abstain?: number;
   per_paslon?: HasilPaslon[];
 }
+import HasilCharts from "@/components/HasilCharts";
 
 export default function BuktiPage() {
   const router = useRouter();
@@ -101,21 +103,44 @@ export default function BuktiPage() {
       )}
 
       {hasil?.diumumkan && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="bg-emerald-50 rounded-xl p-4 text-center">
             <p className="font-bold text-emerald-700">Hasil Pemilihan</p>
             <p className="text-xs text-emerald-600 mt-0.5">Total suara: {hasil.total_suara}</p>
           </div>
-          {hasil.per_paslon?.map((p) => (
-            <div key={p.kandidat_id} className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
-              <div className="flex -space-x-2 shrink-0">
-                <CandidateAvatar nama={p.nama_ketua} foto={p.foto_ketua} size={40} />
-                <CandidateAvatar nama={p.nama_wakil} foto={p.foto_wakil} size={40} />
+
+          {/* Visualisasi Grafik Batang & Lingkaran */}
+          <HasilCharts
+            perPaslon={hasil.per_paslon ?? []}
+            totalSuara={hasil.total_suara ?? 0}
+            jumlahAbstain={hasil.jumlah_abstain ?? 0}
+          />
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 px-1">
+              Rincian Perolehan Paslon
+            </h4>
+            {hasil.per_paslon?.map((p) => (
+              <div key={p.kandidat_id} className="bg-white rounded-xl shadow p-4 flex items-center gap-3">
+                <div className="flex -space-x-2 shrink-0">
+                  <CandidateAvatar nama={p.nama_ketua} foto={p.foto_ketua} size={40} />
+                  <CandidateAvatar nama={p.nama_wakil} foto={p.foto_wakil} size={40} />
+                </div>
+                <p className="flex-1 text-sm font-medium">No. {p.nomor_urut} -- {p.nama_ketua} &amp; {p.nama_wakil}</p>
+                <p className="font-bold text-lg">{p.jumlah_suara}</p>
               </div>
-              <p className="flex-1 text-sm font-medium">No. {p.nomor_urut} -- {p.nama_ketua} &amp; {p.nama_wakil}</p>
-              <p className="font-bold text-lg">{p.jumlah_suara}</p>
-            </div>
-          ))}
+            ))}
+
+            {(hasil.jumlah_abstain ?? 0) > 0 && (
+              <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-slate-400"></span>
+                  <p className="text-sm font-medium text-slate-600">Abstain / Suara Kosong</p>
+                </div>
+                <p className="font-bold text-lg text-slate-700">{hasil.jumlah_abstain}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

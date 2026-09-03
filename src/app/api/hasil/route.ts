@@ -42,10 +42,14 @@ export async function GET(req: NextRequest) {
     jumlah_suara: jumlahByKandidat.get(k._id) ?? 0,
   }));
 
+  const jumlahAbstain = jumlahByKandidat.get("abstain") ?? 0;
+  const totalSuara = perPaslon.reduce((sum, p) => sum + p.jumlah_suara, 0) + jumlahAbstain;
+
   return NextResponse.json({
     diumumkan: true,
     diumumkan_at: fase.hasil_diumumkan_at,
-    total_suara: perPaslon.reduce((sum, p) => sum + p.jumlah_suara, 0),
+    total_suara: totalSuara,
+    jumlah_abstain: jumlahAbstain,
     per_paslon: perPaslon,
   });
 }

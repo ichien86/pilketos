@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import { useRole } from "@/lib/use-role";
 import PanitiaNav from "@/components/PanitiaNav";
+import HasilCharts from "@/components/HasilCharts";
 
 interface Rekon {
   mode: string;
@@ -11,6 +12,8 @@ interface Rekon {
   total_sudah_memilih: number;
   total_scan_keluar: number;
   total_suara: number;
+  total_kedaluwarsa?: number;
+  total_sedang_proses?: number;
   per_paslon: Array<{ kandidat_id: string; nomor_urut: number | null; nama: string; jumlah_suara: number }>;
   perlu_investigasi: boolean;
 }
@@ -202,6 +205,26 @@ export default function RekonsiliasiPage() {
             <Stat label="Total suara" value={data.total_suara} onClick={() => tampilkanDaftar("suara")} active={daftarFilter === "suara"} busy={daftarBusy === "suara"} />
           </div>
 
+          {/* Rincian Audit bila ada token yang tidak terpakai atau sesi aktif */}
+          {((data.total_kedaluwarsa ?? 0) > 0 || (data.total_sedang_proses ?? 0) > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-amber-800">Token Kedaluwarsa</p>
+                  <p className="text-[11px] text-amber-600">Batal / waktu bilik habis sebelum memilih</p>
+                </div>
+                <span className="text-xl font-bold text-amber-900 ml-2">{data.total_kedaluwarsa ?? 0}</span>
+              </div>
+              <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-blue-800">Sedang Antre / Di Bilik</p>
+                  <p className="text-[11px] text-blue-600">Pemilih yang sedang dalam proses voting</p>
+                </div>
+                <span className="text-xl font-bold text-blue-900 ml-2">{data.total_sedang_proses ?? 0}</span>
+              </div>
+            </div>
+          )}
+
           {daftarFilter && (
             <div className="bg-white rounded-xl shadow overflow-hidden">
               <div className="p-3 border-b flex items-center justify-between">
@@ -261,13 +284,23 @@ export default function RekonsiliasiPage() {
           )}
 
           {fasePemilihan?.hasil_diumumkan ? (
-            <div className="bg-white rounded-xl shadow divide-y">
-              {data.per_paslon.map((p) => (
-                <div key={p.kandidat_id} className="p-3 flex items-center justify-between">
-                  <span>No. {p.nomor_urut} -- {p.nama}</span>
-                  <span className="font-bold">{p.jumlah_suara}</span>
+            <div className="space-y-4">
+              {/* Visualisasi Grafik Batang & Lingkaran */}
+              <HasilCharts perPaslon={data.per_paslon} totalSuara={data.total_suara} title="Grafik Perolehan Suara" />
+
+              <div className="bg-white rounded-xl shadow divide-y">
+                <div className="p-3 bg-slate-50/70 font-semibold text-xs text-slate-500 uppercase tracking-wider">
+                  Tabel Rekapitulasi Suara
                 </div>
-              ))}
+                {data.per_paslon.map((p) => (
+                  <div key={p.kandidat_id} className="p-3 flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {p.nomor_urut ? `No. ${p.nomor_urut} -- ${p.nama}` : p.nama}
+                    </span>
+                    <span className="font-bold text-slate-900">{p.jumlah_suara}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow p-4 text-center text-slate-500 text-sm">
