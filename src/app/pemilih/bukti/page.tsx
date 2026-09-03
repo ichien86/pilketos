@@ -67,7 +67,7 @@ export default function BuktiPage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [router]);
 
   const sudahSelesai = Boolean(data?.buktiSudahDiscan || data?.status === "selesai");
 
