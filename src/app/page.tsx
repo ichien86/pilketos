@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
@@ -29,8 +29,48 @@ export default function LoginPage() {
     return 0;
   });
 
+  // Lockout countdown: sisa detik sebelum boleh mencoba lagi
+  const [lockoutSisa, setLockoutSisa] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const until = sessionStorage.getItem("pilketos_login_lockout_until");
+      if (until) {
+        const sisa = Math.ceil((parseInt(until, 10) - Date.now()) / 1000);
+        return sisa > 0 ? sisa : 0;
+      }
+    }
+    return 0;
+  });
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startLockout = useCallback((detik: number) => {
+    const untilMs = Date.now() + detik * 1000;
+    sessionStorage.setItem("pilketos_login_lockout_until", String(untilMs));
+    setLockoutSisa(detik);
+  }, []);
+
+  useEffect(() => {
+    if (lockoutSisa <= 0) {
+      if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+      return;
+    }
+    lockoutTimer.current = setInterval(() => {
+      setLockoutSisa((prev) => {
+        if (prev <= 1) {
+          sessionStorage.removeItem("pilketos_login_lockout_until");
+          if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    };
+  }, [lockoutSisa > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (lockoutSisa > 0) return;
     setError(null);
     setLoading(true);
     try {
@@ -47,7 +87,11 @@ export default function LoginPage() {
       }
       router.push(ROLE_HOME[res.role] ?? "/");
     } catch (e) {
-      if (e instanceof ApiError && e.status === 403) {
+      if (e instanceof ApiError && e.status === 429) {
+        // Server rate limit — kunci form selama 60 detik
+        startLockout(60);
+        setError(e.message);
+      } else if (e instanceof ApiError && e.status === 403) {
         setError(e.message + " -- coba halaman Aktivasi Akun di bawah.");
       } else {
         const nextCount = salahCount + 1;
@@ -109,12 +153,24 @@ export default function LoginPage() {
               )}
             </div>
           )}
+          {lockoutSisa > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 text-center space-y-1">
+              <p className="font-bold flex items-center justify-center gap-1.5">
+                <span>🔒</span> Login dikunci sementara
+              </p>
+              <p>Silakan tunggu <strong>{lockoutSisa} detik</strong> sebelum mencoba kembali.</p>
+            </div>
+          )}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutSisa > 0}
             className="w-full bg-slate-900 text-white rounded-lg py-2 font-medium disabled:opacity-50"
           >
-            {loading ? "Memproses..." : "Masuk"}
+            {lockoutSisa > 0
+              ? `Tunggu ${lockoutSisa} detik...`
+              : loading
+                ? "Memproses..."
+                : "Masuk"}
           </button>
         </form>
         <a href="/aktivasi" className="block text-center text-sm text-blue-600 hover:underline">
