@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [salahCount, setSalahCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("pilketos_login_salah_count");
+      return saved ? parseInt(saved, 10) || 0 : 0;
+    }
+    return 0;
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +38,9 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("pilketos_login_salah_count");
+      }
       if (res.wajib_ganti_password) {
         router.push("/ganti-password");
         return;
@@ -40,7 +50,18 @@ export default function LoginPage() {
       if (e instanceof ApiError && e.status === 403) {
         setError(e.message + " -- coba halaman Aktivasi Akun di bawah.");
       } else {
-        setError(e instanceof Error ? e.message : "Gagal login");
+        const nextCount = salahCount + 1;
+        setSalahCount(nextCount);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("pilketos_login_salah_count", String(nextCount));
+        }
+
+        const baseMsg = e instanceof Error ? e.message : "Gagal login";
+        if (nextCount >= 3) {
+          setError(`${baseMsg}. Khususnya bagi pemilih, silakan hubungi panitia apabila lupa username/password.`);
+        } else {
+          setError(baseMsg);
+        }
       }
     } finally {
       setLoading(false);
@@ -73,7 +94,21 @@ export default function LoginPage() {
             <label htmlFor="login-password" className="text-sm font-medium block mb-1">Password</label>
             <PasswordInput id="login-password" value={password} onChange={setPassword} required />
           </div>
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && (
+            <div className="space-y-2">
+              <p className="text-red-600 text-sm font-medium">{error}</p>
+              {salahCount >= 3 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 space-y-1 text-left">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <span>⚠️</span> Percobaan login gagal ({salahCount}x)
+                  </p>
+                  <p className="leading-relaxed text-amber-800">
+                    <strong>Khusus pemilih:</strong> Jika Anda lupa username (NIS/NIP) atau password Anda, silakan <strong>hubungi panitia pemilihan</strong> di Tempat Pemungutan Suara (TPS) untuk bantuan pengecekan data DPT.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
