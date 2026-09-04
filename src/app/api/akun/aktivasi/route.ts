@@ -4,6 +4,7 @@ import { errorJson } from "@/lib/api";
 import { hashPassword, verifyPassword, setSessionCookie } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { validasiBuktiIdentitas } from "@/lib/bukti-identitas";
+import { checkRateLimit, getClientIp, recordHit } from "@/lib/rate-limit";
 import type { AkunPengguna, PemilihDpt } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,20 @@ export const dynamic = "force-dynamic";
 // US-02 (aktivasi pertama / aktivasi ulang setelah reset password).
 // Aktivasi dapat dilakukan sejak masa pendataan dibuka sampai pemilihan selesai.
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+
+  // Anti brute-force aktivasi: maks 5 kegagalan per menit per IP
+  const ipCheck = checkRateLimit(`aktivasi:ip:${ip}`, 5, 60);
+  if (ipCheck.limited) {
+    return NextResponse.json(
+      {
+        error:
+          "Terlalu banyak percobaan aktivasi gagal. Silakan tunggu 1 menit sebelum mencoba kembali.",
+      },
+      { status: 429, headers: { "Retry-After": String(ipCheck.retryAfter) } }
+    );
+  }
+
   const mode = await resolveAppMode();
   const [fasePendataan, fasePemilihan] = await Promise.all([
     getFase("pendataan"),
@@ -56,7 +71,10 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordCocok = await verifyPassword(passwordDefault, akun.password_hash);
-  if (!passwordCocok) return errorJson("username atau password salah", 401);
+  if (!passwordCocok) {
+    recordHit(`aktivasi:ip:${ip}`);
+    return errorJson("username atau password salah", 401);
+  }
 
   const pemilih = await db
     .collection<PemilihDpt>("pemilih_dpt")
@@ -64,6 +82,7 @@ export async function POST(req: NextRequest) {
   if (!pemilih || pemilih.tanggal_lahir !== tanggalLahir) {
     // Password TIDAK diubah -- mencegah orang lain merebut akun hanya
     // dengan menebak NIS/NIP (kriteria penerimaan US-02).
+    recordHit(`aktivasi:ip:${ip}`);
     return errorJson("Tanggal lahir tidak cocok dengan data DPT", 401);
   }
 
