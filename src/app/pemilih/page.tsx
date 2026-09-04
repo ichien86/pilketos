@@ -72,6 +72,8 @@ export default function PemilihHomePage() {
   const [hasil, setHasil] = useState<HasilRes | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [siapMasuk, setSiapMasuk] = useState(false);
+  const [loginUlangState, setLoginUlangState] = useState<string | null>(null);
+  const initialCheckDone = useRef(false);
   const pollingRef = useRef<ReturnType<typeof setInterval>>();
 
   // Polling real-time pengumuman hasil perolehan suara (tanpa harus refresh manual)
@@ -165,6 +167,18 @@ export default function PemilihHomePage() {
         if (res.voteToken) {
           localStorage.setItem("pilketos_voteToken", res.voteToken);
         }
+
+        // Deteksi apakah ini pemeriksaan pertama saat membuka/refresh halaman (login ulang)
+        if (!initialCheckDone.current) {
+          initialCheckDone.current = true;
+          if (res.status === "menunggu" || res.status === "di_bilik" || res.status === "sudah_memilih") {
+            // Pemilih login ulang di tengah proses: tampilkan tombol aksi terarah, jangan redirect mendadak
+            setLoginUlangState(res.status);
+            return;
+          }
+        }
+
+        // Metode normal: status berubah secara real-time saat pemilih sedang di halaman ini menunggu giliran
         if (res.status === "menunggu" || res.status === "di_bilik") {
           if (localStorage.getItem("pilketos_voteToken")) {
             router.push("/pemilih/bilik");
@@ -296,7 +310,9 @@ export default function PemilihHomePage() {
                     🗳️
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-slate-900">Abstain / Suara Kosong</p>
+                    <p className="font-bold text-sm text-slate-900">
+                      {hasil.per_paslon && hasil.per_paslon.length === 1 ? "Kotak Kosong" : "Tidak Memilih"}
+                    </p>
                     <div className="flex items-baseline gap-2 mt-0.5">
                       <span className="text-sm font-black text-slate-600">{hasil.jumlah_abstain} Suara</span>
                       <span className="text-xs text-slate-400 font-medium">
@@ -387,9 +403,63 @@ export default function PemilihHomePage() {
               </div>
             )
           ) : (
-            <div className="bg-white rounded-xl shadow p-6 text-center space-y-3">
-              <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 text-center space-y-4">
+              {loginUlangState === "menunggu" || loginUlangState === "di_bilik" ? (
+                <div className="space-y-4">
+                  <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold shadow-sm">
+                    🗳️
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      Sesi Memilih Aktif
+                    </span>
+                    <h2 className="text-xl font-black text-slate-900 pt-1">
+                      {loginUlangState === "di_bilik" ? "Lanjutkan Memilih di Bilik" : "Anda Sudah di-ACC Panitia"}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto">
+                      {loginUlangState === "di_bilik"
+                        ? "Sesi bilik suara Anda masih aktif. Klik tombol di bawah untuk melanjutkan ke surat suara."
+                        : "Token suara Anda sudah aktif. Klik tombol di bawah saat tiba giliran Anda memasuki bilik fisik."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/pemilih/bilik")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition text-sm sm:text-base flex items-center justify-center gap-2"
+                  >
+                    <span>Masuk ke Bilik Suara (Scan Barcode Bilik)</span>
+                    <span>&rarr;</span>
+                  </button>
+                </div>
+              ) : loginUlangState === "sudah_memilih" ? (
+                <div className="space-y-4">
+                  <div className="w-14 h-14 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold shadow-sm">
+                    🎫
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                      Suara Sudah Masuk Kotak
+                    </span>
+                    <h2 className="text-xl font-black text-slate-900 pt-1">Menuju Meja Pintu Keluar</h2>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto">
+                      Suara sah Anda telah berhasil dicatat. Silakan klik tombol di bawah untuk menampilkan barcode bukti ke panitia pintu keluar.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/pemilih/bukti")}
+                    className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition text-sm sm:text-base flex items-center justify-center gap-2"
+                  >
+                    <span>Buka Barcode Bukti Pintu Keluar</span>
+                    <span>&rarr;</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-500">{STATUS_LABEL[status] ?? status}</p>
+                  {error && <p className="text-red-600 text-sm">{error}</p>}
+                </div>
+              )}
             </div>
           )}
         </>

@@ -30,9 +30,9 @@ export default function BilikPage() {
 
   const AbstainMock: KandidatRingkas = {
     _id: "abstain",
-    nomor_urut: 0, // Not really used for Abstain
-    nama_ketua: "Abstain",
-    nama_wakil: "Kotak Kosong",
+    nomor_urut: 0,
+    nama_ketua: "Tidak Memilih",
+    nama_wakil: "",
     foto_ketua: null,
     foto_wakil: null,
     visi: null,
@@ -128,28 +128,31 @@ export default function BilikPage() {
 
   if (!voteToken) return null;
 
-  // Grid kolom adaptif dinamis berdasarkan jumlah kandidat dan orientasi layar (portrait/landscape)
+  const isDuaPaslon = kandidatList.length <= 2;
+
+  // Grid kolom adaptif dinamis berdasarkan prinsip keadilan pemilu (LUBER JURDIL):
+  // Untuk 2 paslon (atau calon tunggal vs kotak kosong), layout HARUS 2 kolom berdampingan (grid-cols-2)
+  // di semua ukuran layar (termasuk layar HP portrait), agar kedua paslon langsung tampil setara
+  // dan menyeluruh secara bersamaan di layar tanpa ada yang tertutup ke bawah.
   const gridLayoutClass =
-    kandidatList.length === 1
-      ? "grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5 max-w-2xl mx-auto items-stretch"
-      : kandidatList.length === 2
-      ? "grid grid-cols-1 sm:grid-cols-2 landscape:grid-cols-2 gap-3.5 sm:gap-5 lg:gap-6 items-stretch"
+    kandidatList.length <= 2
+      ? "grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 max-w-4xl mx-auto items-stretch"
       : kandidatList.length === 3
-      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 landscape:grid-cols-3 gap-3.5 sm:gap-5 items-stretch"
-      : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 landscape:grid-cols-2 lg:landscape:grid-cols-4 gap-3.5 sm:gap-5 items-stretch";
+      ? "grid grid-cols-1 sm:grid-cols-3 landscape:grid-cols-3 gap-2.5 sm:gap-4 max-w-6xl mx-auto items-stretch"
+      : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 items-stretch";
 
   return (
-    <main className="min-h-screen p-2.5 sm:p-5 lg:p-6 w-full max-w-7xl mx-auto space-y-3 sm:space-y-4">
+    <main className="min-h-screen p-2 sm:p-4 lg:p-6 w-full max-w-7xl mx-auto space-y-2.5 sm:space-y-4">
       {/* Header Surat Suara */}
       <div className="flex items-center justify-between pt-1 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">
             Surat Suara Digital
           </h1>
-          <p className="text-[11px] sm:text-xs text-slate-500">Pilketos MAN 3 Boyolali — Bilik Suara</p>
+          <p className="text-[10px] sm:text-xs text-slate-500">Pilketos MAN 3 Boyolali — Bilik Suara</p>
         </div>
         {mode === "voting" && (
-          <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full shrink-0">
+          <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 bg-emerald-100 text-emerald-800 rounded-full shrink-0">
             {kandidatList.length} Paslon
           </span>
         )}
@@ -167,14 +170,14 @@ export default function BilikPage() {
       )}
 
       {mode === "voting" && (
-        <div className="space-y-3 sm:space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-center">
-            <p className="text-xs sm:text-sm font-medium text-blue-900">
+        <div className="space-y-2.5 sm:space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center">
+            <p className="text-[11px] sm:text-sm font-medium text-blue-900">
               Silakan pelajari visi-misi dan ketuk paslon pilihan Anda:
             </p>
           </div>
 
-          {/* Grid Kartu Suara Adaptif */}
+          {/* Grid Kartu Suara Adaptif Keadilan Pemilu */}
           <div className={gridLayoutClass}>
             {kandidatList.map((k) => (
               <div
@@ -185,42 +188,62 @@ export default function BilikPage() {
                 }}
                 role="button"
                 tabIndex={0}
-                className="flex flex-col justify-between bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-600 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-3.5 sm:p-5 space-y-3.5"
+                className={`flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-600 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group ${
+                  isDuaPaslon ? "p-2 sm:p-4 md:p-5 space-y-2 sm:space-y-3" : "p-3 sm:p-5 space-y-3"
+                }`}
               >
                 {/* Header Paslon & Nomor Urut */}
-                <div className="space-y-2.5 sm:space-y-3">
-                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                    <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-slate-900 text-white flex flex-col items-center justify-center font-black shadow-sm shrink-0">
-                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-1">No</span>
-                      <span className="text-lg sm:text-2xl leading-none">{k.nomor_urut}</span>
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-100 pb-2 sm:pb-2.5">
+                    <div
+                      className={`rounded-lg sm:rounded-xl bg-slate-900 text-white flex flex-col items-center justify-center font-black shadow-sm shrink-0 ${
+                        isDuaPaslon ? "w-8 h-8 sm:w-12 sm:h-12" : "w-10 h-10 sm:w-13 sm:h-13"
+                      }`}
+                    >
+                      <span className="text-[7px] sm:text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-0.5 sm:-mb-1">
+                        No
+                      </span>
+                      <span className={isDuaPaslon ? "text-sm sm:text-2xl leading-none" : "text-lg sm:text-2xl leading-none"}>
+                        {k.nomor_urut}
+                      </span>
                     </div>
-                    <div className="flex -space-x-2.5 shrink-0 pt-0.5">
+                    <div className="flex -space-x-2 sm:-space-x-2.5 shrink-0 pt-0.5">
                       <div className="ring-2 ring-white rounded-full shadow-sm">
-                        <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} size={44} />
+                        <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} size={isDuaPaslon ? 32 : 42} />
                       </div>
                       <div className="ring-2 ring-white rounded-full shadow-sm">
-                        <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} size={44} />
+                        <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} size={isDuaPaslon ? 32 : 42} />
                       </div>
                     </div>
                   </div>
 
                   {/* Nama Kandidat */}
                   <div>
-                    <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    <p className="text-[8px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
                       Calon Ketua &amp; Wakil
                     </p>
-                    <p className="font-bold text-sm sm:text-base md:text-lg text-slate-900 group-hover:text-blue-900 transition leading-snug">
+                    <p
+                      className={`font-bold text-slate-900 group-hover:text-blue-900 transition leading-snug break-words ${
+                        isDuaPaslon ? "text-xs sm:text-base md:text-lg" : "text-sm sm:text-base md:text-lg"
+                      }`}
+                    >
                       {k.nama_ketua} &amp; {k.nama_wakil}
                     </p>
                   </div>
 
                   {/* Visi */}
                   {k.visi && (
-                    <div className="bg-slate-50 rounded-xl p-2.5 sm:p-3 border border-slate-100">
-                      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    <div className="bg-slate-50 rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 border border-slate-100">
+                      <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
                         Visi
                       </p>
-                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
+                      <p
+                        className={`text-slate-700 leading-relaxed italic break-words overflow-y-auto pr-0.5 ${
+                          isDuaPaslon
+                            ? "text-[10px] sm:text-xs max-h-16 sm:max-h-24"
+                            : "text-xs sm:text-sm max-h-24 sm:max-h-32"
+                        }`}
+                      >
                         &ldquo;{k.visi}&rdquo;
                       </p>
                     </div>
@@ -228,20 +251,35 @@ export default function BilikPage() {
 
                   {/* Misi */}
                   {k.misi && (
-                    <div className="space-y-1 max-h-56 landscape:max-h-44 overflow-y-auto pr-1">
-                      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         Misi
                       </p>
-                      <MisiList misi={k.misi} className="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-1" />
+                      <div
+                        className={`overflow-y-auto pr-1 bg-slate-50/50 rounded-lg p-1.5 sm:p-2 border border-slate-100 ${
+                          isDuaPaslon ? "max-h-28 sm:max-h-44" : "max-h-56 landscape:max-h-44"
+                        }`}
+                      >
+                        <MisiList
+                          misi={k.misi}
+                          className={`text-slate-700 leading-snug space-y-1 break-words ${
+                            isDuaPaslon ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
+                          }`}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
 
                 {/* Tombol Pilih Paslon */}
-                <div className="pt-2">
-                  <div className="w-full bg-slate-900 group-hover:bg-blue-600 text-white font-bold text-xs sm:text-sm py-2.5 sm:py-3 rounded-xl text-center shadow transition-all flex items-center justify-center gap-1.5">
-                    <span>Coblos Paslon No. {k.nomor_urut}</span>
-                    <span className="text-xs opacity-80">&rarr;</span>
+                <div className="pt-2 mt-auto">
+                  <div
+                    className={`w-full bg-slate-900 group-hover:bg-blue-600 text-white font-bold rounded-lg sm:rounded-xl text-center shadow transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+                      isDuaPaslon ? "py-2 sm:py-2.5 text-[11px] sm:text-sm" : "py-2.5 sm:py-3 text-xs sm:text-sm"
+                    }`}
+                  >
+                    <span>Coblos No. {k.nomor_urut}</span>
+                    <span className="opacity-80">&rarr;</span>
                   </div>
                 </div>
               </div>
@@ -256,39 +294,45 @@ export default function BilikPage() {
                 }}
                 role="button"
                 tabIndex={0}
-                className="flex flex-col justify-center items-center bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-4 sm:p-5 space-y-4 min-h-[260px]"
+                className="flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-2.5 sm:p-4 md:p-5 space-y-2 sm:space-y-4"
               >
-                <div className="text-center space-y-3">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-slate-100 rounded-full flex items-center justify-center border-2 border-slate-300 group-hover:bg-slate-200 transition-colors">
-                    <span className="text-3xl sm:text-4xl">🗳️</span>
+                <div className="text-center space-y-2 sm:space-y-3">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center border-2 border-slate-300 group-hover:bg-slate-200 transition-colors">
+                    <span className="text-2xl sm:text-3xl">🗳️</span>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pilihan Alternatif</p>
-                    <p className="font-bold text-base sm:text-xl text-slate-900 group-hover:text-blue-950 transition leading-snug">
+                    <p className="text-[8px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                      Pilihan Alternatif
+                    </p>
+                    <p className="font-bold text-xs sm:text-lg text-slate-900 group-hover:text-blue-950 transition leading-snug">
                       Kotak Kosong (Abstain)
                     </p>
                   </div>
-                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                    Pilih ini jika Anda memutuskan untuk tidak memilih pasangan calon tunggal.
+                  <p className="text-[10px] sm:text-xs text-slate-500 max-w-xs mx-auto">
+                    Pilih ini jika Anda memutuskan tidak memilih calon tunggal.
                   </p>
+                </div>
+                <div className="pt-2 mt-auto">
+                  <div className="w-full bg-slate-200 group-hover:bg-slate-800 group-hover:text-white text-slate-800 font-bold rounded-lg sm:rounded-xl text-center shadow transition-all py-2 sm:py-2.5 text-[11px] sm:text-sm">
+                    Pilih Kotak Kosong
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Tombol Abstain jika ada lebih dari 1 paslon */}
+          {/* Teks kecil di bawah paslon jika paslon lebih dari satu */}
           {kandidatList.length > 1 && (
-            <div className="flex justify-center pt-2 pb-4">
+            <div className="flex justify-center pt-3 pb-4">
               <button
                 type="button"
                 onClick={() => {
                   setTerpilih(AbstainMock);
                   setMode("konfirmasi");
                 }}
-                className="text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-sm"
+                className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-4 hover:decoration-slate-400 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100/60"
               >
-                <span>🗳️</span>
-                <span>Pilih Abstain (Kotak Kosong)</span>
+                Tidak Memilih
               </button>
             </div>
           )}
@@ -316,7 +360,12 @@ export default function BilikPage() {
                   </div>
                   <div>
                     <p className="font-extrabold text-base sm:text-xl text-slate-900 leading-tight">
-                      Kotak Kosong (Abstain)
+                      {kandidatList.length === 1 ? "Kotak Kosong" : "Tidak Memilih"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {kandidatList.length === 1
+                        ? "Anda memilih untuk tidak memilih pasangan calon tunggal."
+                        : "Anda memutuskan untuk tidak memilih pasangan calon mana pun."}
                     </p>
                   </div>
                 </>
@@ -350,16 +399,21 @@ export default function BilikPage() {
             {terpilih._id === "abstain" && (
               <div className="text-left space-y-1">
                 <label className="block text-xs sm:text-sm font-semibold text-slate-700">
-                  Alasan Abstain <span className="text-red-500">*</span>
+                  {kandidatList.length === 1 ? "Alasan Memilih Kotak Kosong" : "Alasan Tidak Memilih"}{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   className="w-full border border-slate-300 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                   rows={2}
-                  placeholder="Tuliskan alasan Anda..."
+                  placeholder={
+                    kandidatList.length === 1
+                      ? "Tuliskan alasan memilih kotak kosong..."
+                      : "Tuliskan alasan tidak memilih paslon yang ada..."
+                  }
                   value={alasanAbstain}
                   onChange={(e) => setAlasanAbstain(e.target.value)}
                 />
-                <p className="text-[11px] text-slate-500">Alasan wajib diisi untuk menganalisis keputusan pemilih.</p>
+                <p className="text-[11px] text-slate-500">Alasan wajib diisi untuk evaluasi panitia.</p>
               </div>
             )}
 
@@ -381,7 +435,13 @@ export default function BilikPage() {
                 disabled={busy}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl py-2 sm:py-2.5 text-xs sm:text-sm shadow-lg shadow-emerald-600/30 transition disabled:opacity-50"
               >
-                {busy ? "Mengirim Suara..." : "Ya, Kirim Suara Sah"}
+                {busy
+                  ? "Mengirim Suara..."
+                  : terpilih._id === "abstain"
+                  ? kandidatList.length === 1
+                    ? "Ya, Kirim Kotak Kosong"
+                    : "Ya, Kirim (Tidak Memilih)"
+                  : "Ya, Kirim Suara Sah"}
               </button>
             </div>
           </div>

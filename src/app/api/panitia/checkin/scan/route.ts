@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     nama: pemilih.nama,
+    nis_nip: pemilih.nis_nip,
+    tanggal_lahir: pemilih.tanggal_lahir,
+    jenis: pemilih.jenis,
     kelas_atau_pangkat: pemilih.kelas ?? pemilih.pangkat,
     foto_referensi: pemilih.foto_kartu_pelajar,
     bukti_jenis: pemilih.bukti_jenis === "Lainnya" ? pemilih.bukti_jenis_lainnya : pemilih.bukti_jenis,

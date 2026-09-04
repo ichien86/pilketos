@@ -138,7 +138,9 @@ export default function BuktiPage() {
               <div className="bg-white rounded-xl shadow p-4 flex items-center justify-between border border-slate-100">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-slate-400"></span>
-                  <p className="text-sm font-medium text-slate-600">Abstain / Suara Kosong</p>
+                  <p className="text-sm font-medium text-slate-600">
+                    {hasil.per_paslon && hasil.per_paslon.length === 1 ? "Kotak Kosong" : "Tidak Memilih"}
+                  </p>
                 </div>
                 <p className="font-bold text-lg text-slate-700">{hasil.jumlah_abstain}</p>
               </div>

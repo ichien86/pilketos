@@ -59,17 +59,25 @@ export default function RekonsiliasiPage() {
   const [daftarBusy, setDaftarBusy] = useState<Filter | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      const modeData = await apiFetch<{ aktif: boolean }>("/api/mode/uji-coba");
-      const currentMode = modeData.aktif ? "simulasi" : "prod";
-      setMode(currentMode);
-      const rekonData = await apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${currentMode}`);
-      setData(rekonData);
-      setDaftarFull(null);
-      setDaftarSuara(null);
-      setDaftarFilter(null);
+      try {
+        const modeData = await apiFetch<{ aktif: boolean }>("/api/mode/uji-coba");
+        const currentMode = modeData.aktif ? "simulasi" : "prod";
+        if (cancelled) return;
+        setMode(currentMode);
+        const rekonData = await apiFetch<Rekon>(`/api/admin/rekonsiliasi?mode=${currentMode}`);
+        if (!cancelled) setData(rekonData);
+      } catch {
+        // Abaikan jika sesaat gagal
+      }
     }
     load();
+    const id = setInterval(load, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   async function tampilkanDaftar(filter: Filter) {

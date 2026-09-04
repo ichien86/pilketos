@@ -73,10 +73,14 @@ export default function HasilCharts({
     const totalAbstain = abstainFromList ? abstainFromList.jumlah_suara : jumlahAbstain;
 
     if (totalAbstain > 0) {
+      const realPaslonCount = perPaslon.filter(
+        (p) => p.kandidat_id !== "abstain" && p.nomor_urut !== 0
+      ).length;
+      const labelAbstain = realPaslonCount === 1 ? "Kotak Kosong" : "Tidak Memilih";
       const persentase = totalSuara > 0 ? (totalAbstain / totalSuara) * 100 : 0;
       list.push({
         id: "abstain",
-        label: "Abstain / Suara Kosong",
+        label: labelAbstain,
         jumlah: totalAbstain,
         persentase,
         warna: WARNA_ABSTAIN,

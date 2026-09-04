@@ -7,12 +7,33 @@ import PanitiaNav from "@/components/PanitiaNav";
 
 interface ScanResult {
   nama: string;
+  nis_nip?: string;
+  tanggal_lahir?: string;
+  jenis?: "siswa" | "guru";
   kelas_atau_pangkat: string;
   bukti_jenis: string | null;
   bukti_nomor: string | null;
   lolosSyarat: boolean;
   sudahPunyaSesiHariIni: boolean;
   pemilihId: string;
+}
+
+function formatTanggalLahir(tgl?: string): string {
+  if (!tgl) return "-";
+  try {
+    const parts = tgl.split("-");
+    if (parts.length !== 3) return tgl;
+    const [y, m, d] = parts;
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    const formatted = date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    return `${formatted} (${tgl})`;
+  } catch {
+    return tgl;
+  }
 }
 
 interface BilikItem {
@@ -118,27 +139,70 @@ export default function PanitiaCheckinPage() {
       {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
       {data && !accSuccess && (
-        <div className="bg-white rounded-xl shadow p-6 space-y-3">
-          <h2 className="font-bold text-lg">{data.nama}</h2>
-          <p className="text-slate-600">{data.kelas_atau_pangkat}</p>
-          <p className={data.lolosSyarat ? "text-emerald-600" : "text-red-600"}>
-            {data.lolosSyarat ? "Memenuhi syarat" : "BELUM memenuhi syarat"}
-          </p>
-          {data.sudahPunyaSesiHariIni && <p className="text-amber-600">Sudah punya sesi hari ini!</p>}
-          {data.bukti_jenis && (
-            <p className="text-sm text-slate-600">
-              Bukti diri yang dijanjikan: <strong>{data.bukti_jenis}</strong> No. <strong>{data.bukti_nomor}</strong>
-            </p>
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-5 sm:p-6 space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Verifikasi Dokumen Pemilih
+            </span>
+            <h2 className="font-black text-xl text-slate-900 leading-tight">{data.nama}</h2>
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-sm space-y-2">
+            <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60">
+              <span className="text-slate-500">{data.jenis === "guru" ? "NIP" : "NIS"}</span>
+              <span className="font-bold text-slate-800 font-mono">{data.nis_nip ?? "-"}</span>
+            </div>
+            <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60">
+              <span className="text-slate-500">Tanggal Lahir</span>
+              <span className="font-semibold text-slate-800">
+                {formatTanggalLahir(data.tanggal_lahir)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60">
+              <span className="text-slate-500">{data.jenis === "guru" ? "Pangkat/Jabatan" : "Kelas"}</span>
+              <span className="font-semibold text-slate-800">{data.kelas_atau_pangkat}</span>
+            </div>
+            {data.bukti_jenis && (
+              <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60">
+                <span className="text-slate-500">Dokumen Fisik</span>
+                <span className="font-semibold text-blue-900 text-right">
+                  {data.bukti_jenis} {data.bukti_nomor ? `(${data.bukti_nomor})` : ""}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-slate-500">Syarat Sosialisasi</span>
+              <span className={`font-bold ${data.lolosSyarat ? "text-emerald-700" : "text-red-600"}`}>
+                {data.lolosSyarat ? "✓ Lolos Syarat" : "✗ Belum Selesai Video"}
+              </span>
+            </div>
+          </div>
+
+          {data.sudahPunyaSesiHariIni && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 font-medium">
+              ⚠️ Pemilih ini sudah memiliki sesi pemilihan hari ini!
+            </div>
           )}
-          <p className="text-xs text-slate-400">Cocokkan wajah/dokumen fisik pemilih sebelum menekan ACC.</p>
-          <div className="flex gap-2 pt-2">
-            <button onClick={reset} className="flex-1 border rounded-lg py-2">Batal</button>
+
+          <p className="text-xs text-slate-400 text-center">
+            Cocokkan nama, wajah, dan tanggal lahir dengan kartu pelajar/KTP/identitas fisik sebelum menekan ACC.
+          </p>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={reset}
+              type="button"
+              className="flex-1 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl py-2.5 text-sm transition"
+            >
+              Batal
+            </button>
             <button
               onClick={handleAcc}
+              type="button"
               disabled={!data.lolosSyarat || data.sudahPunyaSesiHariIni || busy}
-              className="flex-1 bg-emerald-600 text-white rounded-lg py-2 disabled:opacity-40"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl py-2.5 text-sm shadow-md transition disabled:opacity-40"
             >
-              {busy ? "Memproses..." : "ACC"}
+              {busy ? "Memproses..." : "ACC Pemilih"}
             </button>
           </div>
         </div>
