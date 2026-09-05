@@ -90,7 +90,7 @@ export default function LoginPage() {
       if (e instanceof ApiError && e.status === 429) {
         // Server rate limit — kunci form selama 60 detik
         startLockout(60);
-        setError(e.message);
+        setError("Terlalu banyak percobaan login gagal.");
       } else if (e instanceof ApiError && e.status === 403) {
         setError(e.message + " -- coba halaman Aktivasi Akun di bawah.");
       } else {
@@ -151,14 +151,6 @@ export default function LoginPage() {
                   </p>
                 </div>
               )}
-            </div>
-          )}
-          {lockoutSisa > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 text-center space-y-1">
-              <p className="font-bold flex items-center justify-center gap-1.5">
-                <span>🔒</span> Login dikunci sementara
-              </p>
-              <p>Silakan tunggu <strong>{lockoutSisa} detik</strong> sebelum mencoba kembali.</p>
             </div>
           )}
           <button
