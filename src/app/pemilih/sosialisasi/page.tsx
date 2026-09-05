@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import MisiList from "@/components/MisiList";
 import LogoutButton from "@/components/LogoutButton";
+import VideoSosialisasiPlayer from "@/components/VideoSosialisasiPlayer";
 
 interface Kandidat {
   _id: string;
@@ -32,7 +33,6 @@ export default function SosialisasiPage() {
   const [video, setVideo] = useState<Video[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [sosialisasiAktif, setSosialisasiAktif] = useState(false);
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   async function refresh() {
     const [k, v, p, fase] = await Promise.all([
@@ -92,15 +92,11 @@ export default function SosialisasiPage() {
                 </span>
               </div>
               {v ? (
-                <video
-                  ref={(el) => {
-                    videoRefs.current[v._id] = el;
-                  }}
+                <VideoSosialisasiPlayer
+                  videoId={v._id}
                   src={v.url}
-                  controls
-                  playsInline
-                  className="w-full rounded-lg"
-                  onEnded={() => onEnded(v._id)}
+                  sudahDitonton={Boolean(sudah)}
+                  onComplete={() => onEnded(v._id)}
                 />
               ) : (
                 <p className="text-sm text-slate-400">Video belum tersedia</p>

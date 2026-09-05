@@ -4,6 +4,7 @@ import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ProgressPemilih, VideoKampanye } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,12 @@ export async function POST(
   const claims = getSessionFromRequest(req);
   if (!requireRole(claims, ["pemilih"]) || !claims.pemilihId) {
     return errorJson("Tidak diizinkan", 403);
+  }
+
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(`video:tonton:${claims.pemilihId}:${ip}`, 6, 60);
+  if (rateLimit.limited) {
+    return errorJson("Terlalu banyak permintaan. Silakan tunggu sebentar.", 429);
   }
 
   const [faseSosialisasi, fasePemilihan] = await Promise.all([
