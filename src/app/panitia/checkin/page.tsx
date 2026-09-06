@@ -42,6 +42,15 @@ interface BilikItem {
   status: "kosong" | "terisi";
 }
 
+interface RingkasanTPS {
+  total_bilik: number;
+  bilik_kosong: number;
+  bilik_terisi: number;
+  antrean_menunggu: number;
+  total_suara: number;
+  total_selesai: number;
+}
+
 // US-23 -- scan (langkah 1, TIDAK ubah status) lalu ACC (langkah 2, tombol terpisah).
 export default function PanitiaCheckinPage() {
   const [scanning, setScanning] = useState(true);
@@ -50,28 +59,35 @@ export default function PanitiaCheckinPage() {
   const [accSuccess, setAccSuccess] = useState(false);
   const [accVoter, setAccVoter] = useState<{ nama: string; kelas_atau_pangkat: string } | null>(null);
   const [bilikList, setBilikList] = useState<BilikItem[]>([]);
+  const [ringkasan, setRingkasan] = useState<RingkasanTPS | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Polling pemantau status bilik saat tampilan sukses aktif
+  // Polling pemantau status bilik yang SELALU aktif sejak halaman dibuka
   useEffect(() => {
-    if (!accSuccess) return;
     let cancelled = false;
     async function refreshBilik() {
       try {
-        const res = await apiFetch<{ mode: string; bilik: BilikItem[] }>("/api/panitia/bilik-monitor");
+        const res = await apiFetch<{
+          mode: string;
+          bilik: BilikItem[];
+          ringkasan?: RingkasanTPS;
+        }>("/api/panitia/bilik-monitor");
         if (!cancelled && res.bilik) {
           setBilikList(res.bilik);
+          if (res.ringkasan) setRingkasan(res.ringkasan);
         }
       } catch {
         // Biarkan jika gagal refresh sesaat
       }
     }
-    const id = setInterval(refreshBilik, 3000);
+    refreshBilik();
+    const id = setInterval(refreshBilik, 3500);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [accSuccess]);
+  }, []);
+
 
   async function handleScan(qrPayload: string) {
     if (!scanning) return;
@@ -122,12 +138,61 @@ export default function PanitiaCheckinPage() {
     setScanning(true);
   }
 
+  const bilikKosongList = bilikList.filter((b) => b.status === "kosong");
+  const bilikKosongCount = bilikKosongList.length;
+  const nomorBilikKosong = bilikKosongList.map((b) => b.nomor_bilik);
+
   return (
     <main className="min-h-screen p-4 max-w-md sm:max-w-lg mx-auto space-y-4">
       <header className="space-y-2 pt-2">
         <h1 className="text-lg font-bold">Check-in Pendaftaran</h1>
         <PanitiaNav active="/panitia/checkin" />
       </header>
+
+      {/* Mini Status Bar Kondisi Bilik Real-time (Selalu Terhubung) */}
+      {bilikList.length > 0 && (
+        <div
+          className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs border transition-all ${
+            bilikKosongCount > 0
+              ? "bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-sm"
+              : "bg-amber-50 border-amber-300 text-amber-950 shadow-sm"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  bilikKosongCount > 0 ? "bg-emerald-400" : "bg-amber-400"
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  bilikKosongCount > 0 ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+            </span>
+            <span className="font-bold">
+              {bilikKosongCount > 0
+                ? `${bilikKosongCount} dari ${bilikList.length} Bilik Siap (Bilik ${nomorBilikKosong.join(", ")})`
+                : `Semua ${bilikList.length} Bilik Sedang Penuh`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {ringkasan && (
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                Antre: <strong>{ringkasan.antrean_menunggu}</strong>
+              </span>
+            )}
+            <a
+              href="/panitia/bilik-monitor"
+              className="text-blue-600 hover:text-blue-800 font-bold underline underline-offset-2 text-[11px]"
+            >
+              Monitor →
+            </a>
+          </div>
+        </div>
+      )}
 
       {scanning && (
         <div className="bg-white rounded-xl shadow p-4 space-y-3">
@@ -184,6 +249,12 @@ export default function PanitiaCheckinPage() {
             </div>
           )}
 
+          {bilikList.length > 0 && bilikKosongCount === 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-900 text-center font-medium">
+              ⏳ <strong>Catatan Antrean Bilik:</strong> Semua bilik saat ini sedang penuh. Pemilih tetap dapat di-ACC dan dipersilakan menunggu giliran.
+            </div>
+          )}
+
           <p className="text-xs text-slate-400 text-center">
             Cocokkan nama, wajah, dan tanggal lahir dengan kartu pelajar/KTP/identitas fisik sebelum menekan ACC.
           </p>
@@ -207,6 +278,7 @@ export default function PanitiaCheckinPage() {
           </div>
         </div>
       )}
+
 
       {accSuccess && (
         <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-5 sm:p-6 space-y-5 text-center">
