@@ -128,18 +128,52 @@ export default function BilikPage() {
 
   if (!voteToken) return null;
 
-  const isDuaPaslon = kandidatList.length <= 2;
+  const nPaslon = kandidatList.length;
 
-  // Grid kolom adaptif dinamis berdasarkan prinsip keadilan pemilu (LUBER JURDIL):
-  // Untuk 2 paslon (atau calon tunggal vs kotak kosong), layout HARUS 2 kolom berdampingan (grid-cols-2)
-  // di semua ukuran layar (termasuk layar HP portrait), agar kedua paslon langsung tampil setara
-  // dan menyeluruh secara bersamaan di layar tanpa ada yang tertutup ke bawah.
+  // Tata letak grid responsif & adaptif berdasarkan jumlah paslon:
+  // - Mode Mobile Portrait:
+  //   * 1 Paslon (+ Kotak Kosong): Tumpuk atas-bawah (grid-cols-1)
+  //   * 2 Paslon: Tumpuk atas-bawah (grid-cols-1) agar seluruh kartu, nama, visi, scrollbox misi,
+  //     dan tombol coblos paslon 1 & 2 tampil fit bersamaan di layar HP tanpa perlu scroll halaman.
+  //   * 3 Paslon: Tumpuk atas-bawah kompak (grid-cols-1) dengan scrollbox misi yang dipadatkan.
+  //   * 4+ Paslon: Grid 2 kolom (grid-cols-2) agar layar tetap proporsional.
+  // - Mode Tablet/Desktop atau Mobile Landscape:
+  //   * 1-2 Paslon: 2 kolom berdampingan (sm:grid-cols-2 landscape:grid-cols-2)
+  //   * 3 Paslon: 3 kolom berdampingan (sm:grid-cols-3 landscape:grid-cols-3)
+  //   * 4+ Paslon: 4 kolom berdampingan (sm:grid-cols-2 lg:grid-cols-4 landscape:grid-cols-4)
   const gridLayoutClass =
-    kandidatList.length <= 2
-      ? "grid grid-cols-2 gap-2 sm:gap-4 md:gap-6 max-w-4xl mx-auto items-stretch"
-      : kandidatList.length === 3
-      ? "grid grid-cols-1 sm:grid-cols-3 landscape:grid-cols-3 gap-2.5 sm:gap-4 max-w-6xl mx-auto items-stretch"
-      : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 items-stretch";
+    nPaslon <= 2
+      ? "grid grid-cols-1 sm:grid-cols-2 landscape:grid-cols-2 gap-2.5 sm:gap-4 md:gap-6 max-w-xl sm:max-w-4xl mx-auto items-stretch"
+      : nPaslon === 3
+      ? "grid grid-cols-1 sm:grid-cols-3 landscape:grid-cols-3 gap-2 sm:gap-3 md:gap-4 max-w-xl sm:max-w-6xl mx-auto items-stretch"
+      : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 landscape:grid-cols-4 gap-2 sm:gap-3 md:gap-4 items-stretch";
+
+  // Penyesuaian padding dan kerapatan kartu
+  const cardClass =
+    nPaslon <= 2
+      ? "p-2.5 sm:p-4 md:p-5 space-y-1.5 sm:space-y-3"
+      : nPaslon === 3
+      ? "p-2 sm:p-3 md:p-4 space-y-1 sm:space-y-2"
+      : "p-2 sm:p-3 space-y-1 sm:space-y-2";
+
+  // Batas tinggi scrollbox misi adaptif (misi-scroll)
+  const misiScrollClass =
+    nPaslon <= 2
+      ? "max-h-20 sm:max-h-36 md:max-h-44 landscape:max-h-28"
+      : nPaslon === 3
+      ? "max-h-14 sm:max-h-32 md:max-h-40 landscape:max-h-24"
+      : "max-h-16 sm:max-h-28 md:max-h-36 landscape:max-h-24";
+
+  // Batas tinggi visi
+  const visiScrollClass =
+    nPaslon <= 2
+      ? "max-h-12 sm:max-h-20 landscape:max-h-14"
+      : nPaslon === 3
+      ? "max-h-10 sm:max-h-16 landscape:max-h-12"
+      : "max-h-10 sm:max-h-16 landscape:max-h-12";
+
+  // Ukuran avatar identitas
+  const avatarSize = nPaslon <= 2 ? 34 : nPaslon === 3 ? 28 : 26;
 
   return (
     <main className="min-h-screen p-2 sm:p-4 lg:p-6 w-full max-w-7xl mx-auto space-y-2.5 sm:space-y-4">
@@ -170,9 +204,9 @@ export default function BilikPage() {
       )}
 
       {mode === "voting" && (
-        <div className="space-y-2.5 sm:space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-center">
-            <p className="text-[11px] sm:text-sm font-medium text-blue-900">
+        <div className="space-y-2 sm:space-y-3.5">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-2.5 py-1 sm:px-3 sm:py-2 text-center">
+            <p className="text-[10px] sm:text-sm font-medium text-blue-900">
               Silakan pelajari visi-misi dan ketuk paslon pilihan Anda:
             </p>
           </div>
@@ -188,43 +222,41 @@ export default function BilikPage() {
                 }}
                 role="button"
                 tabIndex={0}
-                className={`flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-600 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group ${
-                  isDuaPaslon ? "p-2 sm:p-4 md:p-5 space-y-2 sm:space-y-3" : "p-3 sm:p-5 space-y-3"
-                }`}
+                className={`flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-blue-600 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group ${cardClass}`}
               >
                 {/* Header Paslon & Nomor Urut */}
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-100 pb-2 sm:pb-2.5">
+                <div className="space-y-1.5 sm:space-y-2.5">
+                  <div className="flex items-center justify-between gap-1.5 sm:gap-2 border-b border-slate-100 pb-1.5 sm:pb-2">
                     <div
                       className={`rounded-lg sm:rounded-xl bg-slate-900 text-white flex flex-col items-center justify-center font-black shadow-sm shrink-0 ${
-                        isDuaPaslon ? "w-8 h-8 sm:w-12 sm:h-12" : "w-10 h-10 sm:w-13 sm:h-13"
+                        nPaslon <= 2 ? "w-8 h-8 sm:w-12 sm:h-12" : "w-7 h-7 sm:w-10 sm:h-10"
                       }`}
                     >
                       <span className="text-[7px] sm:text-[9px] uppercase font-bold tracking-wider text-slate-400 -mb-0.5 sm:-mb-1">
                         No
                       </span>
-                      <span className={isDuaPaslon ? "text-sm sm:text-2xl leading-none" : "text-lg sm:text-2xl leading-none"}>
+                      <span className={nPaslon <= 2 ? "text-sm sm:text-2xl leading-none" : "text-xs sm:text-xl leading-none"}>
                         {k.nomor_urut}
                       </span>
                     </div>
                     <div className="flex -space-x-2 sm:-space-x-2.5 shrink-0 pt-0.5">
                       <div className="ring-2 ring-white rounded-full shadow-sm">
-                        <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} size={isDuaPaslon ? 32 : 42} />
+                        <CandidateAvatar nama={k.nama_ketua} foto={k.foto_ketua} size={avatarSize} />
                       </div>
                       <div className="ring-2 ring-white rounded-full shadow-sm">
-                        <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} size={isDuaPaslon ? 32 : 42} />
+                        <CandidateAvatar nama={k.nama_wakil} foto={k.foto_wakil} size={avatarSize} />
                       </div>
                     </div>
                   </div>
 
                   {/* Nama Kandidat */}
                   <div>
-                    <p className="text-[8px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                    <p className="text-[7px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                       Calon Ketua &amp; Wakil
                     </p>
                     <p
                       className={`font-bold text-slate-900 group-hover:text-blue-900 transition leading-snug break-words ${
-                        isDuaPaslon ? "text-xs sm:text-base md:text-lg" : "text-sm sm:text-base md:text-lg"
+                        nPaslon <= 2 ? "text-xs sm:text-base md:text-lg" : "text-[11px] sm:text-sm md:text-base"
                       }`}
                     >
                       {k.nama_ketua} &amp; {k.nama_wakil}
@@ -234,15 +266,11 @@ export default function BilikPage() {
                   {/* Visi */}
                   {k.visi && (
                     <div className="bg-slate-50 rounded-lg sm:rounded-xl p-1.5 sm:p-2.5 border border-slate-100">
-                      <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                      <p className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
                         Visi
                       </p>
                       <p
-                        className={`text-slate-700 leading-relaxed italic break-words overflow-y-auto pr-0.5 ${
-                          isDuaPaslon
-                            ? "text-[10px] sm:text-xs max-h-16 sm:max-h-24"
-                            : "text-xs sm:text-sm max-h-24 sm:max-h-32"
-                        }`}
+                        className={`text-slate-700 leading-relaxed italic break-words overflow-y-auto misi-scroll pr-0.5 text-[9px] sm:text-xs ${visiScrollClass}`}
                       >
                         &ldquo;{k.visi}&rdquo;
                       </p>
@@ -252,19 +280,20 @@ export default function BilikPage() {
                   {/* Misi */}
                   {k.misi && (
                     <div className="space-y-0.5 sm:space-y-1">
-                      <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Misi
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                          Misi
+                        </p>
+                        <span className="text-[7px] sm:text-[9px] text-blue-600 bg-blue-50 px-1 rounded font-semibold">
+                          scroll ↕
+                        </span>
+                      </div>
                       <div
-                        className={`overflow-y-auto pr-1 bg-slate-50/50 rounded-lg p-1.5 sm:p-2 border border-slate-100 ${
-                          isDuaPaslon ? "max-h-28 sm:max-h-44" : "max-h-56 landscape:max-h-44"
-                        }`}
+                        className={`overflow-y-auto misi-scroll pr-1 bg-slate-50/50 rounded-lg p-1.5 sm:p-2 border border-slate-100 ${misiScrollClass}`}
                       >
                         <MisiList
                           misi={k.misi}
-                          className={`text-slate-700 leading-snug space-y-1 break-words ${
-                            isDuaPaslon ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
-                          }`}
+                          className="text-slate-700 leading-snug space-y-0.5 sm:space-y-1 break-words text-[9px] sm:text-xs"
                         />
                       </div>
                     </div>
@@ -272,10 +301,10 @@ export default function BilikPage() {
                 </div>
 
                 {/* Tombol Pilih Paslon */}
-                <div className="pt-2 mt-auto">
+                <div className="pt-1.5 sm:pt-2 mt-auto">
                   <div
                     className={`w-full bg-slate-900 group-hover:bg-blue-600 text-white font-bold rounded-lg sm:rounded-xl text-center shadow transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
-                      isDuaPaslon ? "py-2 sm:py-2.5 text-[11px] sm:text-sm" : "py-2.5 sm:py-3 text-xs sm:text-sm"
+                      nPaslon <= 2 ? "py-1.5 sm:py-2.5 text-[11px] sm:text-sm" : "py-1 sm:py-2 text-[10px] sm:text-xs"
                     }`}
                   >
                     <span>Coblos No. {k.nomor_urut}</span>
@@ -294,26 +323,26 @@ export default function BilikPage() {
                 }}
                 role="button"
                 tabIndex={0}
-                className="flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group p-2.5 sm:p-4 md:p-5 space-y-2 sm:space-y-4"
+                className={`flex flex-col justify-between bg-white rounded-xl sm:rounded-2xl border-2 border-slate-200 hover:border-slate-800 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer overflow-hidden group ${cardClass}`}
               >
-                <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center border-2 border-slate-300 group-hover:bg-slate-200 transition-colors">
-                    <span className="text-2xl sm:text-3xl">🗳️</span>
+                <div className="text-center space-y-1.5 sm:space-y-3 my-auto">
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 mx-auto bg-slate-100 rounded-full flex items-center justify-center border-2 border-slate-300 group-hover:bg-slate-200 transition-colors">
+                    <span className="text-xl sm:text-3xl">🗳️</span>
                   </div>
                   <div>
-                    <p className="text-[8px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    <p className="text-[7px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wide">
                       Pilihan Alternatif
                     </p>
                     <p className="font-bold text-xs sm:text-lg text-slate-900 group-hover:text-blue-950 transition leading-snug">
                       Kotak Kosong (Abstain)
                     </p>
                   </div>
-                  <p className="text-[10px] sm:text-xs text-slate-500 max-w-xs mx-auto">
+                  <p className="text-[9px] sm:text-xs text-slate-500 max-w-xs mx-auto">
                     Pilih ini jika Anda memutuskan tidak memilih calon tunggal.
                   </p>
                 </div>
-                <div className="pt-2 mt-auto">
-                  <div className="w-full bg-slate-200 group-hover:bg-slate-800 group-hover:text-white text-slate-800 font-bold rounded-lg sm:rounded-xl text-center shadow transition-all py-2 sm:py-2.5 text-[11px] sm:text-sm">
+                <div className="pt-1.5 sm:pt-2 mt-auto">
+                  <div className="w-full bg-slate-200 group-hover:bg-slate-800 group-hover:text-white text-slate-800 font-bold rounded-lg sm:rounded-xl text-center shadow transition-all py-1.5 sm:py-2.5 text-[11px] sm:text-sm">
                     Pilih Kotak Kosong
                   </div>
                 </div>

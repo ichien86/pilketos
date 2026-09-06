@@ -63,3 +63,21 @@ body {
   .animate-lj-item { opacity: 0; animation: lj-item 400ms ease-out forwards; }
   .animate-lj-glow { animation: lj-glow 2.2s ease-in-out infinite; }
 }
+
+/* Scrollbar tipis dan elegan untuk scrollbox visi & misi kartu suara digital */
+.misi-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.misi-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+.misi-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 4px;
+}
+.misi-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
