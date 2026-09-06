@@ -12,7 +12,9 @@ interface Bilik {
   _id: string;
   nomor_bilik: number;
   status: "kosong" | "terisi";
+  durasi_detik?: number;
 }
+
 interface Rekon {
   total_token_terbit: number;
   total_sudah_memilih: number;
@@ -109,12 +111,15 @@ export default function PengawasPage() {
                 }`}
               >
                 <div className="text-xl">{b.nomor_bilik}</div>
-                <div className="text-xs mt-1">{b.status === "kosong" ? "Kosong" : "Terisi"}</div>
+                <div className="text-xs mt-1">
+                  {b.status === "kosong" ? "Kosong" : `Terisi (${Math.floor((b.durasi_detik || 0) / 60)}m)`}
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
+
 
       {rekon && (
         <section>
