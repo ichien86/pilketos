@@ -25,33 +25,20 @@ export async function processAndSavePhoto(file: File): Promise<string> {
     throw new Error(`Ukuran foto terlalu besar (${sizeMb} MB). Batas maksimal ukuran foto adalah 8 MB.`);
   }
 
-  const rawBuffer = Buffer.from(await file.arrayBuffer());
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  const inputBlob = new Blob([new Uint8Array(inputBuffer)], { type: file.type || "image/jpeg" });
 
-  // 1. Pre-process dengan Sharp:
-  // - Auto-rotate tegak sesuai orientasi EXIF kamera HP
-  // - Downscale ke batas max 800x800 agar AI penghapus background berjalan super cepat (<2 detik) dan hemat memori (<80MB RAM)
-  let preprocessedBuffer: Buffer;
-  try {
-    preprocessedBuffer = await sharp(rawBuffer)
-      .rotate()
-      .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-      .png()
-      .toBuffer();
-  } catch {
-    throw new Error("File gambar rusak atau tidak dapat dibaca oleh sistem pengolah gambar.");
-  }
-
-  // 2. AI Penghapus Background
   let cutout: Buffer;
   try {
-    const resultBlob = await removeBackground(new Uint8Array(preprocessedBuffer), { model: "small" });
+    const resultBlob = await removeBackground(inputBlob, { model: "small" });
     cutout = Buffer.from(await resultBlob.arrayBuffer());
   } catch {
-    // Kalau AI model gagal atau timeout, gunakan foto hasil pre-process apa adanya daripada gagal total
-    cutout = preprocessedBuffer;
+    // Kalau model gagal (mis. format tidak dikenali di sisi model), pakai
+    // foto asli apa adanya daripada gagal total -- lebih baik ada foto
+    // dengan background daripada tidak ada foto sama sekali.
+    cutout = inputBuffer;
   }
 
-  // 3. Potong dan rapikan kanvas avatar 480x480
   let avatarBuffer: Buffer;
   try {
     avatarBuffer = await sharp(cutout)
@@ -66,7 +53,7 @@ export async function processAndSavePhoto(file: File): Promise<string> {
     // Fallback jika .trim() gagal (misal gambar transparan penuh atau warna latar belakang seragam)
     avatarBuffer = await sharp(cutout)
       .resize(AVATAR_SIZE, AVATAR_SIZE, {
-        fit: "cover",
+        fit: "contain",
         background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .png()

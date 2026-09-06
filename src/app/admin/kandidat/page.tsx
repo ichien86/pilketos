@@ -29,6 +29,7 @@ export default function AdminKandidatPage() {
   const [error, setError] = useState<string | null>(null);
   const [akunInfo, setAkunInfo] = useState<{ username: string; password_sementara: string } | null>(null);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null); // `${kandidatId}:${slot}`
+  const [uploadingInfo, setUploadingInfo] = useState<{ roleLabel: string; nomorLabel: string; targetName: string } | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const isUploading = uploadingSlot !== null;
@@ -67,7 +68,12 @@ export default function AdminKandidatPage() {
   ) {
     if (isUploading) return;
     const key = `${kandidatId}:${slot}`;
+    const roleLabel = slot === "ketua" ? "Ketua" : "Wakil";
+    const targetName = kandidatInfo?.nama ? `(${kandidatInfo.nama})` : "";
+    const nomorLabel = kandidatInfo?.nomor ? `Paslon No. ${kandidatInfo.nomor}` : "Kandidat";
+
     setUploadingSlot(key);
+    setUploadingInfo({ roleLabel, nomorLabel, targetName });
     setError(null);
     setSuccessMsg(null);
     try {
@@ -76,18 +82,16 @@ export default function AdminKandidatPage() {
       body.append("slot", slot);
       await apiFetch(`/api/kandidat/${kandidatId}/foto`, { method: "POST", body });
       await refresh();
-      const roleLabel = slot === "ketua" ? "Ketua" : "Wakil";
-      const targetName = kandidatInfo?.nama ? `(${kandidatInfo.nama})` : "";
-      const nomorLabel = kandidatInfo?.nomor ? `Paslon No. ${kandidatInfo.nomor}` : "kandidat";
-      setSuccessMsg(`✓ Foto ${roleLabel} untuk ${nomorLabel} ${targetName} berhasil diunggah dan diperbarui!`);
+      setSuccessMsg(`Foto ${roleLabel} untuk ${nomorLabel} ${targetName} berhasil diunggah! Latar belakang telah dihapus otomatis dan avatar paslon telah diperbarui.`);
     } catch (e) {
       setError(
         e instanceof ApiError
-          ? `Gagal mengunggah foto: ${e.message}`
-          : "Gagal mengunggah foto. Silakan periksa koneksi internet atau gunakan file foto lain."
+          ? e.message
+          : "Gagal mengunggah foto. Pastikan format foto JPG, PNG, atau WEBP di bawah 8MB dan koneksi internet stabil."
       );
     } finally {
       setUploadingSlot(null);
+      setUploadingInfo(null);
     }
   }
 
@@ -144,25 +148,48 @@ export default function AdminKandidatPage() {
 
       {/* Floating Indicator saat Sedang Upload Foto (Mengunci Tindakan Lain) */}
       {isUploading && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 ring-2 ring-blue-500/40">
-          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></span>
-          <div className="text-xs">
-            <p className="font-bold">Sedang memproses &amp; mengunggah foto...</p>
-            <p className="text-slate-400 text-[11px]">Tindakan lain dikunci sementara agar proses tidak bentrok.</p>
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-950 text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-3.5 border border-slate-700 ring-4 ring-amber-500/30 max-w-sm">
+          <span className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin shrink-0"></span>
+          <div className="text-xs space-y-0.5">
+            <p className="font-bold text-amber-300">Sedang memproses &amp; hapus background...</p>
+            <p className="text-slate-200 text-[11px] truncate">
+              {uploadingInfo ? `${uploadingInfo.roleLabel} - ${uploadingInfo.nomorLabel}` : "Memproses foto..."}
+            </p>
+            <p className="text-slate-400 text-[10px]">Tindakan lain dikunci sementara agar tidak bentrok.</p>
           </div>
+        </div>
+      )}
+
+      {/* Banner Notifikasi Sedang Upload & Hapus Background */}
+      {isUploading && (
+        <div className="bg-amber-50 border-2 border-amber-400 text-amber-950 p-4 rounded-xl text-sm shadow-sm space-y-1.5 animate-pulse">
+          <div className="flex items-center gap-2.5 font-bold text-amber-900">
+            <span className="w-4 h-4 border-2 border-amber-700 border-t-transparent rounded-full animate-spin shrink-0"></span>
+            <span>Sedang Memproses Foto &amp; Menghapus Background...</span>
+          </div>
+          <p className="text-xs text-amber-900 leading-relaxed">
+            Sedang mengunggah <strong>{uploadingInfo ? `${uploadingInfo.roleLabel} untuk ${uploadingInfo.nomorLabel} ${uploadingInfo.targetName}` : "foto"}</strong>.
+            Sistem AI sedang memotong latar belakang foto secara otomatis dengan kualitas asli. Harap tunggu beberapa saat...
+          </p>
+          <p className="text-[11px] text-amber-800 font-medium">
+            🔒 Seluruh tindakan lain (unggah foto lain, tambah paslon, publish, hapus) dikunci sementara hingga proses selesai.
+          </p>
         </div>
       )}
 
       {/* Banner Pesan Sukses */}
       {successMsg && (
-        <div className="bg-emerald-50 border-2 border-emerald-400 text-emerald-950 px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">🎉</span>
-            <span>{successMsg}</span>
+        <div className="bg-emerald-50 border-2 border-emerald-500 text-emerald-950 p-4 rounded-xl text-sm font-medium shadow-sm flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold text-emerald-900 text-base">
+              <span className="text-emerald-600 font-extrabold text-lg">✓</span>
+              <span>Foto Berhasil Diunggah!</span>
+            </div>
+            <p className="text-xs text-emerald-800 leading-relaxed">{successMsg}</p>
           </div>
           <button
             onClick={() => setSuccessMsg(null)}
-            className="text-emerald-800 hover:text-emerald-950 text-xs px-2 py-1 rounded bg-emerald-100 font-bold transition"
+            className="text-emerald-800 hover:text-emerald-950 text-xs px-2.5 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 font-bold transition shrink-0"
           >
             ✕ Tutup
           </button>
@@ -171,14 +198,25 @@ export default function AdminKandidatPage() {
 
       {/* Banner Pesan Gagal / Error */}
       {error && (
-        <div className="bg-red-50 border-2 border-red-400 text-red-950 px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">⚠️</span>
-            <span>{error}</span>
+        <div className="bg-red-50 border-2 border-red-500 text-red-950 p-4 rounded-xl text-sm font-medium shadow-sm flex items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-red-900 text-base">
+              <span className="text-red-600 font-extrabold text-lg">⚠️</span>
+              <span>Gagal Mengunggah Foto</span>
+            </div>
+            <p className="text-xs text-red-800 font-semibold">{error}</p>
+            <div className="text-[11px] text-red-700 bg-red-100/70 rounded-lg p-2.5 space-y-0.5">
+              <p className="font-semibold">💡 Tips jika mengalami kendala upload:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-red-800">
+                <li>Gunakan format gambar JPG, JPEG, PNG, atau WEBP.</li>
+                <li>Ukuran file maksimal adalah 8 MB.</li>
+                <li>Pastikan koneksi internet stabil saat proses mengunggah berlangsung.</li>
+              </ul>
+            </div>
           </div>
           <button
             onClick={() => setError(null)}
-            className="text-red-800 hover:text-red-950 text-xs px-2 py-1 rounded bg-red-100 font-bold transition"
+            className="text-red-800 hover:text-red-950 text-xs px-2.5 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 font-bold transition shrink-0"
           >
             ✕ Tutup
           </button>
@@ -286,12 +324,12 @@ export default function AdminKandidatPage() {
                         }`}
                       >
                         {busy ? (
-                          <span className="flex items-center gap-1.5 text-blue-600 font-semibold animate-pulse">
-                            <span className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                            Memproses...
+                          <span className="flex items-center gap-1.5 text-amber-700 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-200 animate-pulse">
+                            <span className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin shrink-0"></span>
+                            Hapus background...
                           </span>
                         ) : isUploading ? (
-                          <span className="text-slate-400">Tunggu proses...</span>
+                          <span className="text-slate-400 italic">Terkunci (menunggu)</span>
                         ) : foto ? (
                           "Ganti foto"
                         ) : (

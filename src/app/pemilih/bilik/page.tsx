@@ -307,7 +307,7 @@ export default function BilikPage() {
                       nPaslon <= 2 ? "py-1.5 sm:py-2.5 text-[11px] sm:text-sm" : "py-1 sm:py-2 text-[10px] sm:text-xs"
                     }`}
                   >
-                    <span>Coblos No. {k.nomor_urut}</span>
+                    <span>Pilih No. {k.nomor_urut}</span>
                     <span className="opacity-80">&rarr;</span>
                   </div>
                 </div>
