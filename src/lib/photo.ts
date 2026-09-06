@@ -18,34 +18,60 @@ const AVATAR_SIZE = 480;
 export async function processAndSavePhoto(file: File): Promise<string> {
   const ext = path.extname(file.name).toLowerCase();
   if (!ALLOWED_EXT.has(ext)) {
-    throw new Error("Format foto tidak didukung (pakai jpg/png/webp)");
+    throw new Error(`Format file '${ext || "tidak dikenal"}' tidak didukung. Harap gunakan file gambar JPG, JPEG, PNG, atau WEBP.`);
   }
   if (file.size > MAX_PHOTO_BYTES) {
-    throw new Error("Ukuran foto melebihi batas 8MB");
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`Ukuran foto terlalu besar (${sizeMb} MB). Batas maksimal ukuran foto adalah 8 MB.`);
   }
 
-  const inputBuffer = Buffer.from(await file.arrayBuffer());
-  const inputBlob = new Blob([inputBuffer], { type: file.type || "image/jpeg" });
+  const rawBuffer = Buffer.from(await file.arrayBuffer());
 
+  // 1. Pre-process dengan Sharp:
+  // - Auto-rotate tegak sesuai orientasi EXIF kamera HP
+  // - Downscale ke batas max 800x800 agar AI penghapus background berjalan super cepat (<2 detik) dan hemat memori (<80MB RAM)
+  let preprocessedBuffer: Buffer;
+  try {
+    preprocessedBuffer = await sharp(rawBuffer)
+      .rotate()
+      .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+      .png()
+      .toBuffer();
+  } catch {
+    throw new Error("File gambar rusak atau tidak dapat dibaca oleh sistem pengolah gambar.");
+  }
+
+  // 2. AI Penghapus Background
   let cutout: Buffer;
   try {
-    const resultBlob = await removeBackground(inputBlob, { model: "small" });
+    const resultBlob = await removeBackground(new Uint8Array(preprocessedBuffer), { model: "small" });
     cutout = Buffer.from(await resultBlob.arrayBuffer());
   } catch {
-    // Kalau model gagal (mis. format tidak dikenali di sisi model), pakai
-    // foto asli apa adanya daripada gagal total -- lebih baik ada foto
-    // dengan background daripada tidak ada foto sama sekali.
-    cutout = inputBuffer;
+    // Kalau AI model gagal atau timeout, gunakan foto hasil pre-process apa adanya daripada gagal total
+    cutout = preprocessedBuffer;
   }
 
-  const avatarBuffer = await sharp(cutout)
-    .trim({ threshold: 10 })
-    .resize(AVATAR_SIZE, AVATAR_SIZE, {
-      fit: "contain",
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
+  // 3. Potong dan rapikan kanvas avatar 480x480
+  let avatarBuffer: Buffer;
+  try {
+    avatarBuffer = await sharp(cutout)
+      .trim({ threshold: 10 })
+      .resize(AVATAR_SIZE, AVATAR_SIZE, {
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+  } catch {
+    // Fallback jika .trim() gagal (misal gambar transparan penuh atau warna latar belakang seragam)
+    avatarBuffer = await sharp(cutout)
+      .resize(AVATAR_SIZE, AVATAR_SIZE, {
+        fit: "cover",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+  }
 
   const fotoDir = path.join(resolveUploadBaseDir(), "foto");
   await mkdir(fotoDir, { recursive: true });
@@ -55,3 +81,4 @@ export async function processAndSavePhoto(file: File): Promise<string> {
 
   return `/api/uploads/foto/${filename}`;
 }
+
