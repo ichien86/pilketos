@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, hashPassword, verifyPassword } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import type { AkunPengguna } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -19,17 +20,15 @@ export async function POST(req: NextRequest) {
   if (!passwordLama || !passwordBaru) return errorJson("password_lama dan password_baru wajib diisi", 400);
   if (passwordBaru.length < 8) return errorJson("Password baru minimal 8 karakter", 400);
 
-  // Akun kandidat/pemilih hasil mode uji coba (fase simulasi) hidup di
-  // database simulasi, bukan prod -- cek dua-duanya persis seperti
-  // /api/auth/login, supaya endpoint ini tetap benar terlepas dari akun
-  // yang sedang ganti password itu akun sungguhan atau akun uji coba.
-  const dbProd = await getDb("prod");
-  let db = dbProd;
-  let akun = await dbProd.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId });
+  // Prioritaskan database mode yang sedang aktif (produksi atau simulasi uji coba)
+  const appMode = await resolveAppMode();
+  let db = await getDb(appMode);
+  let akun = await db.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId });
   if (!akun) {
-    const dbSimulasi = await getDb("simulasi").catch(() => null);
-    akun = (await dbSimulasi?.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId })) ?? null;
-    if (akun && dbSimulasi) db = dbSimulasi;
+    const fallbackMode = appMode === "prod" ? "simulasi" : "prod";
+    const dbFallback = await getDb(fallbackMode).catch(() => null);
+    akun = (await dbFallback?.collection<AkunPengguna>("akun_pengguna").findOne({ _id: claims.akunId })) ?? null;
+    if (akun && dbFallback) db = dbFallback;
   }
   if (!akun) return errorJson("Akun tidak ditemukan", 404);
 

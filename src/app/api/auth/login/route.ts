@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
+import { resolveAppMode } from "@/lib/fase-gate";
 import { checkRateLimit, getClientIp, recordHit } from "@/lib/rate-limit";
 import type { AkunPengguna } from "@/types";
 
@@ -49,14 +50,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Akun panitia/admin/kandidat/pemilih ASLI selalu di database produksi.
-  // Akun pemilih DUMMY (Epic 6, gladi bersih) hanya ada di database simulasi
-  // -- dicoba kalau tidak ketemu di produksi, supaya login tetap satu pintu.
-  const dbProd = await getDb("prod");
-  let akun = await dbProd.collection<AkunPengguna>("akun_pengguna").findOne({ username });
+  // Prioritaskan database mode yang sedang aktif (produksi atau simulasi uji coba),
+  // lalu fallback ke database pasangannya jika akun tidak ditemukan.
+  const appMode = await resolveAppMode();
+  const dbPrimary = await getDb(appMode);
+  let akun = await dbPrimary.collection<AkunPengguna>("akun_pengguna").findOne({ username });
   if (!akun) {
-    const dbSimulasi = await getDb("simulasi").catch(() => null);
-    akun = (await dbSimulasi?.collection<AkunPengguna>("akun_pengguna").findOne({ username })) ?? null;
+    const fallbackMode = appMode === "prod" ? "simulasi" : "prod";
+    const dbFallback = await getDb(fallbackMode).catch(() => null);
+    akun = (await dbFallback?.collection<AkunPengguna>("akun_pengguna").findOne({ username })) ?? null;
   }
   if (!akun) {
     // Catat kegagalan
