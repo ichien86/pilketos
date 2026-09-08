@@ -28,8 +28,9 @@ export default function ModeSimulasiBanner() {
 
   if (!ujiCobaAktif) return null;
   return (
-    <div className="sticky top-0 z-50 bg-amber-400 text-amber-950 text-center py-2 font-bold tracking-wide text-sm">
-      ⚠ MODE UJI COBA -- DPT, kandidat, video, status fase, dan suara di sini terpisah dari data asli & akan HILANG TOTAL saat mode ini dimatikan
+    <div className="sticky top-0 z-50 bg-amber-400 text-amber-950 text-center py-1 font-bold tracking-wide text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5">
+      <span>⚠️</span>
+      <span>Mode Uji Coba</span>
     </div>
   );
 }
