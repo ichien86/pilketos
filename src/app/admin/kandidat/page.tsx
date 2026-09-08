@@ -34,6 +34,7 @@ export default function AdminKandidatPage() {
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null); // `${kandidatId}:${slot}`
   const [uploadingInfo, setUploadingInfo] = useState<{ roleLabel: string; nomorLabel: string; targetName: string } | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [busyVideoId, setBusyVideoId] = useState<string | null>(null);
 
   const isUploading = uploadingSlot !== null;
 
@@ -146,6 +147,57 @@ export default function AdminKandidatPage() {
       refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Gagal memproses akun paslon");
+    }
+  }
+
+  async function publishVideo(videoId: string, nomor: number) {
+    if (isUploading || busyVideoId) return;
+    if (!confirm(`Publikasikan video kampanye untuk Paslon No. ${nomor}?`)) return;
+    setBusyVideoId(videoId);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await apiFetch(`/api/video/${videoId}/publish`, { method: "POST" });
+      setSuccessMsg(`✓ Video Paslon No. ${nomor} berhasil dipublish (status aktif)!`);
+      refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Gagal mempublikasikan video");
+    } finally {
+      setBusyVideoId(null);
+    }
+  }
+
+  async function unpublishVideo(videoId: string, nomor: number) {
+    if (isUploading || busyVideoId) return;
+    if (!confirm(`Batalkan publish video Paslon No. ${nomor}? Status video akan kembali ke draft dan tidak dapat ditonton pemilih.`)) return;
+    setBusyVideoId(videoId);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await apiFetch(`/api/video/${videoId}/unpublish`, { method: "POST" });
+      setSuccessMsg(`✓ Publish video Paslon No. ${nomor} berhasil dibatalkan (kembali ke draft)!`);
+      refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Gagal membatalkan publish video");
+    } finally {
+      setBusyVideoId(null);
+    }
+  }
+
+  async function hapusVideoDraft(videoId: string, nomor: number) {
+    if (isUploading || busyVideoId) return;
+    if (!confirm(`Hapus video draft Paslon No. ${nomor}? File video fisik di server akan dihapus permanen.`)) return;
+    setBusyVideoId(videoId);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await apiFetch(`/api/video/${videoId}`, { method: "DELETE" });
+      setSuccessMsg(`✓ Video draft Paslon No. ${nomor} berhasil dihapus dari sistem dan server!`);
+      refresh();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Gagal menghapus video draft");
+    } finally {
+      setBusyVideoId(null);
     }
   }
 
@@ -385,36 +437,71 @@ export default function AdminKandidatPage() {
               </div>
             )}
 
-            {/* Monitoring Video Kampanye Paslon */}
-            <div className="bg-slate-50 rounded-lg p-3 text-xs flex items-center justify-between gap-2 border border-slate-200">
-              <div className="flex items-center gap-2">
-                <span className="text-base">
-                  {k.video?.status === "aktif" ? "🟢" : k.video?.status === "draft" ? "🟡" : "⚪"}
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-800">
-                    {k.video?.status === "aktif"
-                      ? "Video Kampanye: Sudah Terbit (Aktif)"
-                      : k.video?.status === "draft"
-                      ? "Video Kampanye: Draft (Belum Dipublish Paslon)"
-                      : "Video Kampanye: Belum Diunggah oleh Paslon"}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    {k.has_akun
-                      ? `Akun login paslon: ${k.username_akun || `paslon${k.nomor_urut}`}`
-                      : "Akun login paslon belum dibuat"}
-                  </p>
+            {/* Monitoring & Kontrol Video Kampanye Paslon */}
+            <div className="bg-slate-50 rounded-lg p-3 text-xs border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">
+                    {k.video?.status === "aktif" ? "🟢" : k.video?.status === "draft" ? "🟡" : "⚪"}
+                  </span>
+                  <div>
+                    <p className="font-semibold text-slate-800">
+                      {k.video?.status === "aktif"
+                        ? "Video Kampanye: Sudah Terbit (Aktif)"
+                        : k.video?.status === "draft"
+                        ? "Video Kampanye: Draft (Belum Dipublish)"
+                        : "Video Kampanye: Belum Diunggah oleh Paslon"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {k.has_akun
+                        ? `Akun login paslon: ${k.username_akun || `paslon${k.nomor_urut}`}`
+                        : "Akun login paslon belum dibuat"}
+                    </p>
+                  </div>
                 </div>
+                {k.video && (
+                  <a
+                    href={k.video.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-md text-blue-600 font-medium shrink-0 flex items-center gap-1 shadow-sm"
+                  >
+                    ▶ Tonton Video
+                  </a>
+                )}
               </div>
-              {k.video && (
-                <a
-                  href={k.video.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-md text-blue-600 font-medium shrink-0 flex items-center gap-1 shadow-sm"
-                >
-                  ▶ Tonton Video
-                </a>
+
+              {/* Tombol Aksi Video untuk Panitia / Admin */}
+              {!isPengawas && k.video && (
+                <div className="flex items-center gap-2 pt-1.5 border-t border-slate-200">
+                  {k.video.status === "draft" && (
+                    <>
+                      <button
+                        onClick={() => publishVideo(k.video!._id, k.nomor_urut)}
+                        disabled={busyVideoId === k.video._id || isUploading}
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium disabled:opacity-50 transition"
+                      >
+                        {busyVideoId === k.video._id ? "Memproses..." : "✓ Publish Video"}
+                      </button>
+                      <button
+                        onClick={() => hapusVideoDraft(k.video!._id, k.nomor_urut)}
+                        disabled={busyVideoId === k.video._id || isUploading}
+                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded font-medium disabled:opacity-50 transition"
+                      >
+                        {busyVideoId === k.video._id ? "Memproses..." : "🗑 Hapus Draft"}
+                      </button>
+                    </>
+                  )}
+                  {k.video.status === "aktif" && (
+                    <button
+                      onClick={() => unpublishVideo(k.video!._id, k.nomor_urut)}
+                      disabled={busyVideoId === k.video._id || isUploading}
+                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded font-medium disabled:opacity-50 transition"
+                    >
+                      {busyVideoId === k.video._id ? "Memproses..." : "↩ Batal Publish (Ke Draft)"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
