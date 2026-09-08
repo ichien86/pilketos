@@ -16,6 +16,9 @@ interface Kandidat {
   visi: string | null;
   misi: string | null;
   status: "draft" | "aktif" | "dibatalkan";
+  has_akun?: boolean;
+  username_akun?: string | null;
+  video?: { _id: string; status: "draft" | "aktif"; url: string } | null;
 }
 
 const KOSONG = { nomor_urut: "", nama_ketua: "", nama_wakil: "", visi: "", misi: "" };
@@ -27,7 +30,7 @@ export default function AdminKandidatPage() {
   const [list, setList] = useState<Kandidat[]>([]);
   const [form, setForm] = useState(KOSONG);
   const [error, setError] = useState<string | null>(null);
-  const [akunInfo, setAkunInfo] = useState<{ username: string; password_sementara: string } | null>(null);
+  const [akunInfo, setAkunInfo] = useState<{ username: string; password_sementara: string; is_reset?: boolean } | null>(null);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null); // `${kandidatId}:${slot}`
   const [uploadingInfo, setUploadingInfo] = useState<{ roleLabel: string; nomorLabel: string; targetName: string } | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -122,16 +125,27 @@ export default function AdminKandidatPage() {
     }
   }
 
-  async function buatAkun(id: string) {
+  async function buatAtauResetAkun(id: string, isReset: boolean = false, labelPaslon: string = "") {
     if (isUploading) return;
+    if (isReset && !confirm(`Reset password akun paslon untuk ${labelPaslon}? Password lama akan diganti dengan password sementara yang baru.`)) {
+      return;
+    }
     setError(null);
     setSuccessMsg(null);
     try {
-      const res = await apiFetch<{ username: string; password_sementara: string }>(`/api/kandidat/${id}/akun`, { method: "POST" });
+      const res = await apiFetch<{ username: string; password_sementara: string; is_reset?: boolean }>(
+        `/api/kandidat/${id}/akun`,
+        { method: "POST" }
+      );
       setAkunInfo(res);
-      setSuccessMsg("✓ Akun paslon berhasil dibuat!");
+      if (res.is_reset) {
+        setSuccessMsg(`✓ Password akun paslon (${res.username}) berhasil direset! Kredensial baru ditampilkan di kotak kuning di bawah.`);
+      } else {
+        setSuccessMsg(`✓ Akun paslon (${res.username}) berhasil dibuat! Kredensial ditampilkan di kotak kuning di bawah.`);
+      }
+      refresh();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Gagal membuat akun");
+      setError(e instanceof ApiError ? e.message : "Gagal memproses akun paslon");
     }
   }
 
@@ -287,9 +301,26 @@ export default function AdminKandidatPage() {
       )}
 
       {akunInfo && !isPengawas && (
-        <p className="text-sm bg-amber-50 rounded-lg p-3">
-          Akun paslon dibuat: <b>{akunInfo.username}</b> / password sementara: <span className="font-mono">{akunInfo.password_sementara}</span>
-        </p>
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 text-sm text-amber-950 space-y-1.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="font-bold flex items-center gap-1.5">
+              <span>🔑</span>
+              <span>Kredensial Akun Paslon {akunInfo.is_reset ? "(Setelah Reset)" : "(Baru Dibuat)"}</span>
+            </span>
+            <button
+              onClick={() => setAkunInfo(null)}
+              className="text-amber-800 hover:text-amber-950 text-xs px-2 py-1 rounded bg-amber-100 font-bold transition"
+            >
+              ✕ Tutup
+            </button>
+          </div>
+          <p className="text-xs text-amber-900">
+            Username: <b>{akunInfo.username}</b> &nbsp;|&nbsp; Password Sementara: <span className="font-mono bg-white px-2 py-0.5 rounded border border-amber-300 font-bold select-all">{akunInfo.password_sementara}</span>
+          </p>
+          <p className="text-[11px] text-amber-800 italic">
+            Salin atau catat username &amp; password sementara ini dan berikan kepada pasangan calon untuk login.
+          </p>
+        </div>
       )}
 
       <div className="space-y-3">
@@ -354,6 +385,39 @@ export default function AdminKandidatPage() {
               </div>
             )}
 
+            {/* Monitoring Video Kampanye Paslon */}
+            <div className="bg-slate-50 rounded-lg p-3 text-xs flex items-center justify-between gap-2 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-base">
+                  {k.video?.status === "aktif" ? "🟢" : k.video?.status === "draft" ? "🟡" : "⚪"}
+                </span>
+                <div>
+                  <p className="font-semibold text-slate-800">
+                    {k.video?.status === "aktif"
+                      ? "Video Kampanye: Sudah Terbit (Aktif)"
+                      : k.video?.status === "draft"
+                      ? "Video Kampanye: Draft (Belum Dipublish Paslon)"
+                      : "Video Kampanye: Belum Diunggah oleh Paslon"}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {k.has_akun
+                      ? `Akun login paslon: ${k.username_akun || `paslon${k.nomor_urut}`}`
+                      : "Akun login paslon belum dibuat"}
+                  </p>
+                </div>
+              </div>
+              {k.video && (
+                <a
+                  href={k.video.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-md text-blue-600 font-medium shrink-0 flex items-center gap-1 shadow-sm"
+                >
+                  ▶ Tonton Video
+                </a>
+              )}
+            </div>
+
             {!isPengawas && (
               <div className="flex gap-2 flex-wrap">
                 {k.status === "draft" && (
@@ -375,11 +439,21 @@ export default function AdminKandidatPage() {
                       Batalkan
                     </button>
                     <button
-                      onClick={() => buatAkun(k._id)}
+                      onClick={() =>
+                        buatAtauResetAkun(
+                          k._id,
+                          Boolean(k.has_akun),
+                          `No. ${k.nomor_urut} (${k.nama_ketua} & ${k.nama_wakil})`
+                        )
+                      }
                       disabled={isUploading}
-                      className="text-sm border rounded-lg px-3 py-1.5 font-medium transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`text-sm rounded-lg px-3 py-1.5 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                        k.has_akun
+                          ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
+                          : "border hover:bg-slate-50 text-slate-800"
+                      }`}
                     >
-                      Buat Akun Paslon
+                      {k.has_akun ? "🔑 Reset Password Akun" : "➕ Buat Akun Paslon"}
                     </button>
                   </>
                 )}

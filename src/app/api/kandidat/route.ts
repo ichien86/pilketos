@@ -4,7 +4,7 @@ import { errorJson } from "@/lib/api";
 import { getSessionFromRequest, requireRole } from "@/lib/auth";
 import { getFase, resolveAppMode } from "@/lib/fase-gate";
 import { newId } from "@/lib/id";
-import type { Kandidat } from "@/types";
+import type { Kandidat, VideoKampanye, AkunPengguna } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -64,5 +64,30 @@ export async function GET(req: NextRequest) {
     .find(filter)
     .sort({ nomor_urut: 1 })
     .toArray();
-  return NextResponse.json(list);
+
+  if (!isPengelola || list.length === 0) {
+    return NextResponse.json(list);
+  }
+
+  const ids = list.map((k) => k._id);
+  const [videoList, akunList] = await Promise.all([
+    db.collection<VideoKampanye>("video_kampanye").find({ kandidat_id: { $in: ids } }).toArray(),
+    db.collection<AkunPengguna>("akun_pengguna").find({ kandidat_id: { $in: ids } }).toArray(),
+  ]);
+
+  const videoByKandidat = new Map(videoList.map((v) => [v.kandidat_id, v]));
+  const akunByKandidat = new Map(akunList.map((a) => [a.kandidat_id, a]));
+
+  const enriched = list.map((k) => {
+    const v = videoByKandidat.get(k._id);
+    const a = akunByKandidat.get(k._id);
+    return {
+      ...k,
+      has_akun: Boolean(a),
+      username_akun: a?.username ?? null,
+      video: v ? { _id: v._id, status: v.status, url: v.url } : null,
+    };
+  });
+
+  return NextResponse.json(enriched);
 }

@@ -24,7 +24,26 @@ export async function POST(
   const sudahAda = await db
     .collection<AkunPengguna>("akun_pengguna")
     .findOne({ kandidat_id: params.id });
-  if (sudahAda) return errorJson("Kandidat ini sudah punya akun", 409);
+
+  if (sudahAda) {
+    // Reset password akun paslon yang sudah ada
+    const tempPassword = randomBytes(6).toString("base64url");
+    await db.collection<AkunPengguna>("akun_pengguna").updateOne(
+      { _id: sudahAda._id },
+      {
+        $set: {
+          password_hash: await hashPassword(tempPassword),
+          wajib_ganti_password: true,
+          aktivasi_selesai: false,
+        },
+      }
+    );
+    return NextResponse.json({
+      username: sudahAda.username,
+      password_sementara: tempPassword,
+      is_reset: true,
+    });
+  }
 
   const body = await req.json().catch(() => null as { username?: string } | null);
   const username =
