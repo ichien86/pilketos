@@ -171,13 +171,21 @@ export default function RekonsiliasiPage() {
           {fasePemilihan.hasil_diumumkan ? (
             <>
               <p className="text-sm text-emerald-700">Hasil SUDAH diumumkan -- dashboard pemilih menampilkan perolehan suara.</p>
-              <button
-                onClick={() => toggleUmumkan(false)}
-                disabled={umumkanBusy}
-                className="text-sm border border-red-300 text-red-600 rounded-lg px-3 py-1.5 disabled:opacity-50"
-              >
-                Batalkan Pengumuman
-              </button>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  onClick={() => toggleUmumkan(false)}
+                  disabled={umumkanBusy}
+                  className="text-xs border border-red-300 text-red-600 hover:bg-red-50 rounded-lg px-3 py-1.5 disabled:opacity-50 font-medium transition"
+                >
+                  Batalkan Pengumuman
+                </button>
+                <a
+                  href="/admin/fase"
+                  className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-lg font-medium border border-slate-300 transition"
+                >
+                  🔄 Kontrol Fase &amp; Reset Periode Baru →
+                </a>
+              </div>
             </>
           ) : (
             <>
