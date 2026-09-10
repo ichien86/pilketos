@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { extractWordFrequencies, type WordFrequency } from "@/lib/word-cloud";
+import { extractWordFrequencies } from "@/lib/word-cloud";
 
 interface PetaKataAlasanProps {
   alasanList: string[];
