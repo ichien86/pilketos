@@ -25,6 +25,15 @@ const SCAN_CONFIG = { fps: 10, qrbox: { width: 250, height: 250 } };
 function formatCameraError(e: unknown): string {
   const name = e instanceof DOMException ? e.name : null;
   const msg = e instanceof Error ? e.message : String(e);
+  if (name === "OverconstrainedError" || msg.includes("OverconstrainedError")) {
+    return "Kamera belakang tidak ditemukan pada perangkat ini. Sistem akan mencoba menggunakan kamera depan/webcam yang tersedia.";
+  }
+  if (name === "NotAllowedError" || msg.includes("NotAllowedError") || msg.includes("Permission denied")) {
+    return "Akses kamera ditolak. Harap izinkan akses kamera di pengaturan browser Anda (ikon gembok di sebelah URL).";
+  }
+  if (name === "NotFoundError" || msg.includes("NotFoundError") || msg.includes("DevicesNotFoundError")) {
+    return "Tidak ada kamera yang terdeteksi di perangkat ini. Pastikan kamera/webcam terpasang.";
+  }
   return name ? `${name}: ${msg}` : msg;
 }
 
@@ -79,20 +88,35 @@ export default function QrScanner({ onResult, active, wajibKameraBelakang = fals
         if (cancelled) return;
 
         if (wajibKameraBelakang) {
-          // Constraint langsung ke browser, TANPA enumerasi/dropdown -- kalau
-          // device ini genuinely tidak punya kamera belakang, sengaja gagal
-          // dengan pesan error, bukan diam-diam jatuh ke kamera depan.
+          // Prioritaskan kamera belakang (environment) tanpa exact constraint yang kaku.
+          // Jika perangkat tidak memiliki kamera belakang (misalnya laptop/PC di bilik atau HP tertentu),
+          // fallback otomatis ke kamera yang tersedia alih-alih melempar OverconstrainedError.
           const scanner = new Html5Qrcode(containerId);
           scannerRef.current = scanner;
-          await scanner.start(
-            { facingMode: { exact: "environment" } },
-            SCAN_CONFIG,
-            (decodedText) => onResult(decodedText),
-            () => {
-              // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
+          try {
+            await scanner.start(
+              { facingMode: "environment" },
+              SCAN_CONFIG,
+              (decodedText) => onResult(decodedText),
+              () => {
+                // decode error per-frame, diabaikan (normal saat kamera belum fokus ke QR)
+              }
+            );
+            return;
+          } catch (firstErr) {
+            // Fallback jika facingMode environment gagal (misal OverconstrainedError pada laptop/PC):
+            // ambil daftar kamera perangkat dan gunakan webcam/kamera yang ada.
+            const daftar = await Html5Qrcode.getCameras().catch(() => []);
+            if (cancelled) return;
+            if (daftar.length > 0) {
+              setCameras(daftar);
+              const idTerpilih = tebakKameraBelakang(daftar) ?? daftar[0].id;
+              setCameraId(idTerpilih);
+              await mulaiKamera(Html5Qrcode, idTerpilih);
+              return;
             }
-          );
-          return;
+            throw firstErr;
+          }
         }
 
         // Panggilan ini SEKALIGUS yang memicu prompt izin kamera kalau belum
@@ -166,7 +190,7 @@ export default function QrScanner({ onResult, active, wajibKameraBelakang = fals
 
   return (
     <div>
-      {!wajibKameraBelakang && cameras.length > 1 && (
+      {cameras.length > 1 && (
         <select
           value={cameraId ?? ""}
           disabled={switching}
