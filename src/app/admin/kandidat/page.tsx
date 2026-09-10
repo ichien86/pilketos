@@ -5,6 +5,7 @@ import { apiFetch, ApiError } from "@/lib/client-fetch";
 import CandidateAvatar from "@/components/CandidateAvatar";
 import { useRole } from "@/lib/use-role";
 import PanitiaNav from "@/components/PanitiaNav";
+import MisiList from "@/components/MisiList";
 
 interface Kandidat {
   _id: string;
@@ -35,11 +36,53 @@ export default function AdminKandidatPage() {
   const [uploadingInfo, setUploadingInfo] = useState<{ roleLabel: string; nomorLabel: string; targetName: string } | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [busyVideoId, setBusyVideoId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Kandidat | null>(null);
+  const [editForm, setEditForm] = useState(KOSONG);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const isUploading = uploadingSlot !== null;
 
   async function refresh() {
     setList(await apiFetch<Kandidat[]>("/api/kandidat"));
+  }
+
+  function openEdit(k: Kandidat) {
+    setEditTarget(k);
+    setEditForm({
+      nomor_urut: String(k.nomor_urut),
+      nama_ketua: k.nama_ketua || "",
+      nama_wakil: k.nama_wakil || "",
+      visi: k.visi || "",
+      misi: k.misi || "",
+    });
+    setError(null);
+  }
+
+  async function handleSimpanEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget || savingEdit) return;
+    setSavingEdit(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await apiFetch<Kandidat>(`/api/kandidat/${editTarget._id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          nomor_urut: Number(editForm.nomor_urut),
+          nama_ketua: editForm.nama_ketua.trim(),
+          nama_wakil: editForm.nama_wakil.trim(),
+          visi: editForm.visi,
+          misi: editForm.misi,
+        }),
+      });
+      setSuccessMsg(`✓ Berhasil memperbarui data Paslon No. ${res.nomor_urut} (${res.nama_ketua} & ${res.nama_wakil})!`);
+      setEditTarget(null);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gagal memperbarui data kandidat");
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   useEffect(() => {
@@ -389,7 +432,7 @@ export default function AdminKandidatPage() {
               </span>
             </div>
 
-            {k.status === "draft" && !isPengawas && (
+            {k.status !== "dibatalkan" && !isPengawas ? (
               <div className="grid grid-cols-2 gap-3">
                 {(["ketua", "wakil"] as const).map((slot) => {
                   const nama = slot === "ketua" ? k.nama_ketua : k.nama_wakil;
@@ -435,7 +478,34 @@ export default function AdminKandidatPage() {
                   );
                 })}
               </div>
+            ) : (
+              <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <CandidateAvatar nama={k.nama_ketua || "?"} foto={k.foto_ketua} size={48} />
+                  <span className="text-xs text-slate-600">{k.nama_ketua} (Ketua)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CandidateAvatar nama={k.nama_wakil || "?"} foto={k.foto_wakil} size={48} />
+                  <span className="text-xs text-slate-600">{k.nama_wakil} (Wakil)</span>
+                </div>
+              </div>
             )}
+
+            {/* Preview Visi & Misi Paslon */}
+            <div className="bg-slate-50 rounded-lg p-3 text-xs border border-slate-200 space-y-2">
+              <div>
+                <p className="font-semibold text-slate-700">Visi:</p>
+                <p className="text-slate-600 italic whitespace-pre-line">{k.visi || "(Belum diisi)"}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-700">Misi:</p>
+                {k.misi ? (
+                  <MisiList misi={k.misi} className="text-slate-600 mt-1" />
+                ) : (
+                  <p className="text-slate-400 italic">(Belum diisi)</p>
+                )}
+              </div>
+            </div>
 
             {/* Monitoring & Kontrol Video Kampanye Paslon */}
             <div className="bg-slate-50 rounded-lg p-3 text-xs border border-slate-200 space-y-2">
@@ -506,7 +576,18 @@ export default function AdminKandidatPage() {
             </div>
 
             {!isPengawas && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
+                {k.status !== "dibatalkan" && (
+                  <button
+                    type="button"
+                    onClick={() => openEdit(k)}
+                    disabled={isUploading}
+                    className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <span>✏️</span>
+                    <span>Edit Paslon</span>
+                  </button>
+                )}
                 {k.status === "draft" && (
                   <button
                     onClick={() => publish(k._id)}
@@ -549,6 +630,132 @@ export default function AdminKandidatPage() {
           </div>
         ))}
       </div>
+
+      {/* Modal Edit Paslon */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 my-8 border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>✏️</span>
+                <span>Edit Paslon No. {editTarget.nomor_urut}</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                disabled={savingEdit}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSimpanEdit} className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    No. Urut
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={editForm.nomor_urut}
+                    onChange={(e) => setEditForm({ ...editForm, nomor_urut: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Nama Calon Ketua
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Nama Ketua"
+                    value={editForm.nama_ketua}
+                    onChange={(e) => setEditForm({ ...editForm, nama_ketua: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nama Calon Wakil
+                </label>
+                <input
+                  type="text"
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Nama Wakil"
+                  value={editForm.nama_wakil}
+                  onChange={(e) => setEditForm({ ...editForm, nama_wakil: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Visi Paslon
+                </label>
+                <textarea
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Visi paslon..."
+                  rows={3}
+                  value={editForm.visi}
+                  onChange={(e) => setEditForm({ ...editForm, visi: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Misi Paslon
+                  </label>
+                  <span className="text-[11px] text-blue-600 font-medium">
+                    1 baris = 1 poin
+                  </span>
+                </div>
+                <textarea
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-sans"
+                  placeholder={"Mengadakan kegiatan positif dan edukatif\nMeningkatkan kedisiplinan dan tanggung jawab\n..."}
+                  rows={6}
+                  value={editForm.misi}
+                  onChange={(e) => setEditForm({ ...editForm, misi: e.target.value })}
+                />
+                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  💡 <strong>Catatan:</strong> Tekan <em>Enter</em> untuk baris/poin baru. Jangan mengetikkan nomor seperti &apos;1.&apos;, &apos;2.&apos; secara manual karena sistem akan otomatis memberi nomor urut yang rapi.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditTarget(null)}
+                  disabled={savingEdit}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingEdit ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <span>Simpan Perubahan</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

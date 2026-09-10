@@ -21,8 +21,8 @@ export async function POST(
   const db = await getDb(await resolveAppMode());
   const kandidat = await db.collection<Kandidat>("kandidat").findOne({ _id: params.id });
   if (!kandidat) return errorJson("Kandidat tidak ditemukan", 404);
-  if (kandidat.status !== "draft") {
-    return errorJson("Kandidat yang sudah dipublish/dibatalkan tidak bisa diedit bebas lagi", 409);
+  if (kandidat.status === "dibatalkan") {
+    return errorJson("Kandidat yang sudah dibatalkan tidak bisa diedit fotonya", 409);
   }
 
   const form = await req.formData().catch(() => null);

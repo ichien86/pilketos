@@ -20,8 +20,8 @@ export async function PATCH(
   const db = await getDb(await resolveAppMode());
   const kandidat = await db.collection<Kandidat>("kandidat").findOne({ _id: params.id });
   if (!kandidat) return errorJson("Kandidat tidak ditemukan", 404);
-  if (kandidat.status !== "draft") {
-    return errorJson("Kandidat yang sudah dipublish/dibatalkan tidak bisa diedit bebas lagi", 409);
+  if (kandidat.status === "dibatalkan") {
+    return errorJson("Kandidat yang sudah dibatalkan tidak bisa diedit lagi", 409);
   }
 
   const body = await req.json().catch(() => null);
@@ -32,6 +32,13 @@ export async function PATCH(
         const n = Number(body[f]);
         if (!Number.isInteger(n) || n <= 0) return errorJson("nomor_urut tidak valid", 400);
         update[f] = n;
+      } else if (f === "misi" && typeof body[f] === "string") {
+        // Otomatis bersihkan penomoran manual di depan misi jika ada agar tidak dobel
+        update[f] = body[f]
+          .split("\n")
+          .map((l: string) => l.trim().replace(/^(\d+[\.\)]|[-*•])[\s\u200b]*/, "").trim())
+          .filter((l: string) => l.length > 0)
+          .join("\n");
       } else {
         update[f] = typeof body[f] === "string" ? body[f] : null;
       }

@@ -4,5 +4,7 @@ export function splitMisi(misi: string | null): string[] {
   return misi
     .split("\n")
     .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.replace(/^(\d+[\.\)]|[-*•])[\s\u200b]*/, "").trim())
     .filter((line) => line.length > 0);
 }
