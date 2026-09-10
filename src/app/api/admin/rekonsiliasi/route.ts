@@ -50,29 +50,34 @@ export async function GET(req: NextRequest) {
     db.collection<Kandidat>("kandidat").find({}).toArray(),
   ]);
 
-  const nonDibatalkanList = kandidatList.filter((k) => k.status !== "dibatalkan");
+  const nonDibatalkanList = kandidatList
+    .filter((k) => k.status !== "dibatalkan")
+    .sort((a, b) => (a.nomor_urut ?? 99) - (b.nomor_urut ?? 99));
   const labelAbstain = nonDibatalkanList.length === 1 ? "Kotak Kosong" : "Tidak Memilih";
 
-  const kandidatById = new Map(kandidatList.map((k) => [k._id, k]));
-  const perPaslon = perPaslonAgg.map((p) => {
-    if (p._id === "abstain") {
-      return {
-        kandidat_id: "abstain",
-        nomor_urut: 0,
-        nama: labelAbstain,
-        jumlah_suara: p.jumlah,
-      };
-    }
-    const k = kandidatById.get(p._id);
-    return {
-      kandidat_id: p._id,
-      nomor_urut: k?.nomor_urut ?? null,
-      nama: k ? `${k.nama_ketua} & ${k.nama_wakil}` : "(kandidat tidak ditemukan)",
-      jumlah_suara: p.jumlah,
-    };
-  });
+  const jumlahByKandidat = new Map(perPaslonAgg.map((p) => [p._id, p.jumlah]));
 
-  // Urutkan nomor urut paslon, dan abstain di akhir
+  // Seluruh paslon yang sah/aktif HARUS selalu tampil dalam rekapitulasi,
+  // meskipun perolehan suaranya masih 0 (bukan menghilang dari daftar).
+  const perPaslon = nonDibatalkanList.map((k) => ({
+    kandidat_id: k._id,
+    nomor_urut: k.nomor_urut ?? null,
+    nama: `${k.nama_ketua} & ${k.nama_wakil}`,
+    jumlah_suara: jumlahByKandidat.get(k._id) ?? 0,
+  }));
+
+  // Masukkan opsi abstain jika ada suara tidak memilih atau jika calon tunggal
+  const jumlahAbstain = jumlahByKandidat.get("abstain") ?? 0;
+  if (jumlahAbstain > 0 || nonDibatalkanList.length === 1) {
+    perPaslon.push({
+      kandidat_id: "abstain",
+      nomor_urut: 0,
+      nama: labelAbstain,
+      jumlah_suara: jumlahAbstain,
+    });
+  }
+
+  // Urutkan nomor urut paslon, dan letakkan abstain di akhir
   perPaslon.sort((a, b) => {
     if (a.nomor_urut === 0) return 1;
     if (b.nomor_urut === 0) return -1;
