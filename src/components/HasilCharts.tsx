@@ -45,11 +45,6 @@ export default function HasilCharts({
   );
   const labelAbstain = realPaslonCount === 1 ? "Kotak Kosong" : "Tidak Memilih";
 
-  const totalAbstainSuara = useMemo(() => {
-    const fromList = perPaslon.find((p) => p.kandidat_id === "abstain" || p.nomor_urut === 0);
-    return fromList ? fromList.jumlah_suara : jumlahAbstain;
-  }, [perPaslon, jumlahAbstain]);
-
   const chartData = useMemo(() => {
     const list: Array<{
       id: string;
@@ -151,7 +146,7 @@ export default function HasilCharts({
           >
             🍩 Grafik Lingkaran
           </button>
-          {(totalAbstainSuara > 0 || alasanAbstainList.length > 0) && (
+          {alasanAbstainList.length > 0 && (
             <button
               type="button"
               onClick={() => setTabGrafik("peta_kata")}

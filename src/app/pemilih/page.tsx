@@ -47,7 +47,6 @@ interface HasilRes {
   total_suara?: number;
   jumlah_abstain?: number;
   per_paslon?: HasilPaslon[];
-  alasan_abstain_list?: string[];
 }
 
 // Dashboard tunggal yang menyesuaikan diri ke tahapan yang sedang berjalan --
@@ -261,7 +260,6 @@ export default function PemilihHomePage() {
                 perPaslon={hasil.per_paslon}
                 jumlahAbstain={hasil.jumlah_abstain ?? 0}
                 totalSuara={hasil.total_suara ?? 0}
-                alasanAbstainList={hasil.alasan_abstain_list ?? []}
               />
             </div>
           )}
