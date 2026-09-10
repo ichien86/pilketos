@@ -3,25 +3,28 @@ import { getDb } from "@/lib/db";
 import { errorJson } from "@/lib/api";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
 import { resolveAppMode } from "@/lib/fase-gate";
-import { checkRateLimit, getClientIp, recordHit } from "@/lib/rate-limit";
+import { clearRateLimit, getClientIp, isRateLimited, recordHit } from "@/lib/rate-limit";
 import type { AkunPengguna } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-// Anti brute-force: maks 5 kegagalan login per menit per IP atau username
-const BRUTE_FORCE_LIMIT = 5;
+// Anti brute-force:
+// - Per-user: maks 5 kegagalan login per menit (mencegah tebak password akun spesifik)
+// - Per-IP: maks 60 kegagalan login per menit (ramah NAT Wi-Fi sekolah ratusan siswa)
+const USER_BRUTE_FORCE_LIMIT = 5;
+const IP_BRUTE_FORCE_LIMIT = 60;
 const BRUTE_FORCE_WINDOW = 60; // detik
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
-  // Cek rate limit per IP sebelum parsing body
-  const ipCheck = checkRateLimit(`login:ip:${ip}`, BRUTE_FORCE_LIMIT, BRUTE_FORCE_WINDOW);
+  // Cek apakah IP sedang terblokir karena terlalu banyak kegagalan (tanpa menambah hit)
+  const ipCheck = isRateLimited(`login:ip:${ip}`, IP_BRUTE_FORCE_LIMIT, BRUTE_FORCE_WINDOW);
   if (ipCheck.limited) {
     return NextResponse.json(
       {
         error:
-          "Terlalu banyak percobaan login gagal. Silakan tunggu 1 menit sebelum mencoba kembali.",
+          "Terlalu banyak percobaan login gagal dari jaringan ini. Silakan tunggu 1 menit sebelum mencoba kembali.",
       },
       { status: 429, headers: { "Retry-After": String(ipCheck.retryAfter) } }
     );
@@ -34,17 +37,17 @@ export async function POST(req: NextRequest) {
     return errorJson("username dan password wajib diisi", 400);
   }
 
-  // Cek rate limit per username
-  const userCheck = checkRateLimit(
+  // Cek apakah akun ini sedang terblokir karena terlalu banyak kegagalan (tanpa menambah hit)
+  const userCheck = isRateLimited(
     `login:user:${username.toLowerCase()}`,
-    BRUTE_FORCE_LIMIT,
+    USER_BRUTE_FORCE_LIMIT,
     BRUTE_FORCE_WINDOW
   );
   if (userCheck.limited) {
     return NextResponse.json(
       {
         error:
-          "Terlalu banyak percobaan login gagal. Silakan tunggu 1 menit sebelum mencoba kembali.",
+          "Terlalu banyak percobaan login gagal untuk akun ini. Silakan tunggu 1 menit sebelum mencoba kembali.",
       },
       { status: 429, headers: { "Retry-After": String(userCheck.retryAfter) } }
     );
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
     akun = (await dbFallback?.collection<AkunPengguna>("akun_pengguna").findOne({ username })) ?? null;
   }
   if (!akun) {
-    // Catat kegagalan
+    // Catat kegagalan hanya saat kredensial salah
     recordHit(`login:ip:${ip}`);
     recordHit(`login:user:${username.toLowerCase()}`);
     return errorJson("username atau password salah", 401);
@@ -80,11 +83,14 @@ export async function POST(req: NextRequest) {
 
   const cocok = await verifyPassword(password, akun.password_hash);
   if (!cocok) {
-    // Catat kegagalan
+    // Catat kegagalan hanya saat password salah
     recordHit(`login:ip:${ip}`);
     recordHit(`login:user:${username.toLowerCase()}`);
     return errorJson("username atau password salah", 401);
   }
+
+  // Login berhasil: bersihkan riwayat kegagalan akun
+  clearRateLimit(`login:user:${username.toLowerCase()}`);
 
   const res = NextResponse.json({
     role: akun.role,

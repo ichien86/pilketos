@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import PetaKataAlasan from "@/components/PetaKataAlasan";
 
 export interface ItemHasil {
   kandidat_id?: string;
@@ -15,6 +16,7 @@ interface HasilChartsProps {
   perPaslon: ItemHasil[];
   totalSuara: number;
   jumlahAbstain?: number;
+  alasanAbstainList?: string[];
   title?: string;
 }
 
@@ -32,9 +34,21 @@ export default function HasilCharts({
   perPaslon,
   totalSuara,
   jumlahAbstain = 0,
+  alasanAbstainList = [],
   title = "Visualisasi Perolehan Suara",
 }: HasilChartsProps) {
-  const [tabGrafik, setTabGrafik] = useState<"batang" | "lingkaran">("batang");
+  const [tabGrafik, setTabGrafik] = useState<"batang" | "lingkaran" | "peta_kata">("batang");
+
+  const realPaslonCount = useMemo(
+    () => perPaslon.filter((p) => p.kandidat_id !== "abstain" && p.nomor_urut !== 0).length,
+    [perPaslon]
+  );
+  const labelAbstain = realPaslonCount === 1 ? "Kotak Kosong" : "Tidak Memilih";
+
+  const totalAbstainSuara = useMemo(() => {
+    const fromList = perPaslon.find((p) => p.kandidat_id === "abstain" || p.nomor_urut === 0);
+    return fromList ? fromList.jumlah_suara : jumlahAbstain;
+  }, [perPaslon, jumlahAbstain]);
 
   const chartData = useMemo(() => {
     const list: Array<{
@@ -137,6 +151,19 @@ export default function HasilCharts({
           >
             🍩 Grafik Lingkaran
           </button>
+          {(totalAbstainSuara > 0 || alasanAbstainList.length > 0) && (
+            <button
+              type="button"
+              onClick={() => setTabGrafik("peta_kata")}
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                tabGrafik === "peta_kata"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              ☁️ Peta Kata Alasan
+            </button>
+          )}
         </div>
       </div>
 
@@ -168,7 +195,7 @@ export default function HasilCharts({
             </div>
           ))}
         </div>
-      ) : (
+      ) : tabGrafik === "lingkaran" ? (
         /* GRAFIK LINGKARAN (DONUT) */
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-2">
           <div className="relative w-48 h-48 shrink-0">
@@ -242,6 +269,14 @@ export default function HasilCharts({
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        /* PETA KATA ALASAN (WORD CLOUD) */
+        <div className="pt-2">
+          <PetaKataAlasan
+            alasanList={alasanAbstainList}
+            labelKotakAtauTidak={labelAbstain}
+          />
         </div>
       )}
     </div>

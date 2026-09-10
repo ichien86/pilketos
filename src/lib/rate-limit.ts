@@ -70,6 +70,44 @@ export function checkRateLimit(
 }
 
 /**
+ * Cek apakah sebuah key sedang terkena rate limit TANPA menambah hit baru.
+ * Berguna untuk memeriksa status sebelum memvalidasi kredensial (agar hanya kegagalan
+ * yang dicatat lewat recordHit).
+ */
+export function isRateLimited(
+  key: string,
+  limit: number,
+  windowSeconds: number
+): { limited: false; remaining: number } | { limited: true; retryAfter: number } {
+  const now = Date.now();
+  gc(now);
+
+  const windowMs = windowSeconds * 1000;
+  const record = store.get(key);
+  if (!record) {
+    return { limited: false, remaining: limit };
+  }
+
+  const cutoff = now - windowMs;
+  record.timestamps = record.timestamps.filter((t) => t > cutoff);
+
+  if (record.timestamps.length >= limit) {
+    const oldestInWindow = record.timestamps[0];
+    const retryAfter = Math.ceil((oldestInWindow + windowMs - now) / 1000);
+    return { limited: true, retryAfter: Math.max(retryAfter, 1) };
+  }
+
+  return { limited: false, remaining: limit - record.timestamps.length };
+}
+
+/**
+ * Reset riwayat hit untuk key tertentu (misal: setelah login berhasil).
+ */
+export function clearRateLimit(key: string): void {
+  store.delete(key);
+}
+
+/**
  * Catat satu hit tanpa mengecek batas (berguna untuk mencatat kegagalan
  * setelah proses verifikasi).
  */

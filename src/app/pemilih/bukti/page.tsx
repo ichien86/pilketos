@@ -26,6 +26,7 @@ interface HasilRes {
   total_suara?: number;
   jumlah_abstain?: number;
   per_paslon?: HasilPaslon[];
+  alasan_abstain_list?: string[];
 }
 import HasilCharts from "@/components/HasilCharts";
 
@@ -112,11 +113,12 @@ export default function BuktiPage() {
             <p className="text-xs text-emerald-600 mt-0.5">Total suara: {hasil.total_suara}</p>
           </div>
 
-          {/* Visualisasi Grafik Batang & Lingkaran */}
+          {/* Visualisasi Grafik Batang & Lingkaran & Peta Kata */}
           <HasilCharts
             perPaslon={hasil.per_paslon ?? []}
             totalSuara={hasil.total_suara ?? 0}
             jumlahAbstain={hasil.jumlah_abstain ?? 0}
+            alasanAbstainList={hasil.alasan_abstain_list ?? []}
           />
 
           <div className="space-y-3">

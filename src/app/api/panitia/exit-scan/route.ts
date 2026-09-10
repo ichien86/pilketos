@@ -44,10 +44,23 @@ export async function POST(req: NextRequest) {
     return errorJson("Barcode ini sudah pernah discan sebelumnya -- ditolak & dicatat sebagai anomali", 409);
   }
 
-  await db.collection<SesiPemilih>("sesi_pemilih").updateOne(
-    { _id: sesi._id },
+  // Atomic compare-and-swap: pastikan barcode_used_at masih null saat update dieksekusi
+  // untuk mencegah race condition jika barcode discan bersamaan di dua meja keluar.
+  const updateResult = await db.collection<SesiPemilih>("sesi_pemilih").updateOne(
+    { _id: sesi._id, barcode_used_at: null },
     { $set: { barcode_used_at: new Date(), status: "selesai" } }
   );
+
+  if (updateResult.matchedCount === 0) {
+    await db.collection<AnomaliScan>("anomali_scan").insertOne({
+      _id: newId(),
+      jenis: "barcode_bukti_reused",
+      sesi_id: sesi._id,
+      created_at: new Date(),
+      detail: `Barcode bukti sesi ${sesi._id} discan bersamaan/ulang -- ditolak & dicatat sebagai anomali`,
+    });
+    return errorJson("Barcode ini sudah pernah discan sebelumnya -- ditolak & dicatat sebagai anomali", 409);
+  }
 
   await db.collection<import("@/types").PemilihDpt>("pemilih_dpt").updateOne(
     { _id: sesi.pemilih_id },

@@ -15,6 +15,7 @@ interface Rekon {
   total_kedaluwarsa?: number;
   total_sedang_proses?: number;
   per_paslon: Array<{ kandidat_id: string; nomor_urut: number | null; nama: string; jumlah_suara: number }>;
+  alasan_abstain_list?: string[];
   perlu_investigasi: boolean;
 }
 interface Fase {
@@ -301,8 +302,13 @@ export default function RekonsiliasiPage() {
 
           {fasePemilihan?.hasil_diumumkan ? (
             <div className="space-y-4">
-              {/* Visualisasi Grafik Batang & Lingkaran */}
-              <HasilCharts perPaslon={data.per_paslon} totalSuara={data.total_suara} title="Grafik Perolehan Suara" />
+              {/* Visualisasi Grafik Batang & Lingkaran & Peta Kata */}
+              <HasilCharts
+                perPaslon={data.per_paslon}
+                totalSuara={data.total_suara}
+                alasanAbstainList={data.alasan_abstain_list ?? []}
+                title="Grafik Perolehan Suara"
+              />
 
               <div className="bg-white rounded-xl shadow divide-y">
                 <div className="p-3 bg-slate-50/70 font-semibold text-xs text-slate-500 uppercase tracking-wider">

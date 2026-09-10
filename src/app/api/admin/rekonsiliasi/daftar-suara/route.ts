@@ -29,9 +29,14 @@ export async function GET(req: NextRequest) {
     .sort({ selesai_at: -1 })
     .toArray();
 
+  const kandidatCount = await db
+    .collection("kandidat")
+    .countDocuments({ status: { $ne: "dibatalkan" } });
+  const labelAbstain = kandidatCount === 1 ? "Kotak Kosong" : "Tidak Memilih";
+
   const daftar = sesiList.map((s) => ({
     token: s.barcode_bukti_plain,
-    pilihan: s.kandidat_dipilih_nomor === 0 ? "Abstain" : `Paslon ${s.kandidat_dipilih_nomor}`,
+    pilihan: s.kandidat_dipilih_nomor === 0 ? labelAbstain : `Paslon ${s.kandidat_dipilih_nomor}`,
     waktu: s.selesai_at,
   }));
 

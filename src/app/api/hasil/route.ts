@@ -23,14 +23,19 @@ export async function GET(req: NextRequest) {
   }
 
   const db = await getDb(mode);
-  const [perPaslonAgg, kandidatList] = await Promise.all([
+  const [perPaslonAgg, kandidatList, alasanDocs] = await Promise.all([
     db
       .collection<Suara>("suara")
       .aggregate<{ _id: string; jumlah: number }>([{ $group: { _id: "$kandidat_id", jumlah: { $sum: 1 } } }])
       .toArray(),
     db.collection<Kandidat>("kandidat").find({ status: { $ne: "dibatalkan" } }).sort({ nomor_urut: 1 }).toArray(),
+    db
+      .collection<Suara>("suara")
+      .find({ kandidat_id: "abstain", alasan_abstain: { $ne: null } }, { projection: { alasan_abstain: 1 } })
+      .toArray(),
   ]);
   const jumlahByKandidat = new Map(perPaslonAgg.map((p) => [p._id, p.jumlah]));
+  const daftarAlasanAbstain = alasanDocs.map((s) => s.alasan_abstain!).filter(Boolean);
 
   const perPaslon = kandidatList.map((k) => ({
     kandidat_id: k._id,
@@ -51,5 +56,6 @@ export async function GET(req: NextRequest) {
     total_suara: totalSuara,
     jumlah_abstain: jumlahAbstain,
     per_paslon: perPaslon,
+    alasan_abstain_list: daftarAlasanAbstain,
   });
 }

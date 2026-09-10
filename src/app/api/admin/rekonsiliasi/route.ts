@@ -50,13 +50,16 @@ export async function GET(req: NextRequest) {
     db.collection<Kandidat>("kandidat").find({}).toArray(),
   ]);
 
+  const nonDibatalkanList = kandidatList.filter((k) => k.status !== "dibatalkan");
+  const labelAbstain = nonDibatalkanList.length === 1 ? "Kotak Kosong" : "Tidak Memilih";
+
   const kandidatById = new Map(kandidatList.map((k) => [k._id, k]));
   const perPaslon = perPaslonAgg.map((p) => {
     if (p._id === "abstain") {
       return {
         kandidat_id: "abstain",
         nomor_urut: 0,
-        nama: "Abstain / Suara Kosong",
+        nama: labelAbstain,
         jumlah_suara: p.jumlah,
       };
     }
@@ -81,6 +84,15 @@ export async function GET(req: NextRequest) {
   const kontrol = await db.collection("kontrol_fase").findOne({ nama_fase: "pemilihan" });
   const hasilDiumumkan = kontrol?.hasil_diumumkan === true;
 
+  let alasanAbstainList: string[] = [];
+  if (hasilDiumumkan) {
+    const alasanDocs = await db
+      .collection<Suara>("suara")
+      .find({ kandidat_id: "abstain", alasan_abstain: { $ne: null } }, { projection: { alasan_abstain: 1 } })
+      .toArray();
+    alasanAbstainList = alasanDocs.map((s) => s.alasan_abstain!).filter(Boolean);
+  }
+
   return NextResponse.json({
     mode,
     total_token_terbit: totalTokenTerbit,
@@ -90,6 +102,7 @@ export async function GET(req: NextRequest) {
     total_kedaluwarsa: totalKedaluwarsa,
     total_sedang_proses: totalSedangProses,
     per_paslon: hasilDiumumkan ? perPaslon : [],
+    alasan_abstain_list: alasanAbstainList,
     perlu_investigasi: perluInvestigasi,
   });
 }
