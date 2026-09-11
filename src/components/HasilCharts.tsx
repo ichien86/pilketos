@@ -182,7 +182,7 @@ export default function HasilCharts({
                 <div
                   className="h-full rounded-full transition-all duration-700 ease-out"
                   style={{
-                    width: item.persentase > 0 ? `${Math.max(item.persentase, 2)}%` : "0%",
+                    width: `${Math.max(item.persentase, 1)}%`,
                     backgroundColor: item.warna,
                   }}
                 />

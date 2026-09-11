@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/client-fetch";
 import { useRole } from "@/lib/use-role";
 import PanitiaNav from "@/components/PanitiaNav";
+import { exportDptToExcel, exportDptToPdf } from "@/lib/dpt-export";
 
 interface Ringkasan {
   total_baris_siswa: number;
@@ -54,6 +55,35 @@ export default function AdminDptPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(FORM_KOSONG);
   const [editError, setEditError] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState<"excel" | "pdf" | null>(null);
+
+  async function handleExportExcel() {
+    if (listTersaring.length === 0) return;
+    setExportBusy("excel");
+    setError(null);
+    try {
+      await exportDptToExcel(listTersaring, filterStatus, filterKelas, cari);
+    } catch (err) {
+      console.error("Gagal ekspor Excel:", err);
+      setError("Gagal mengekspor data ke Excel");
+    } finally {
+      setExportBusy(null);
+    }
+  }
+
+  async function handleExportPdf() {
+    if (listTersaring.length === 0) return;
+    setExportBusy("pdf");
+    setError(null);
+    try {
+      await exportDptToPdf(listTersaring, filterStatus, filterKelas, cari);
+    } catch (err) {
+      console.error("Gagal ekspor PDF:", err);
+      setError("Gagal mengekspor data ke PDF");
+    } finally {
+      setExportBusy(null);
+    }
+  }
 
   async function refreshPemilih() {
     setPemilihList(await apiFetch<Pemilih[]>("/api/dpt"));
@@ -352,15 +382,45 @@ export default function AdminDptPage() {
           </button>
         </div>
 
-        {(daftarKelas.length > 0 || pemilihList.some((p) => p.jenis === "guru")) && (
-          <select className="border rounded-lg px-3 py-1.5 text-sm" value={filterKelas} onChange={(e) => setFilterKelas(e.target.value)}>
-            <option value="">Semua kelas</option>
-            {daftarKelas.map((k) => (
-              <option key={k} value={k}>{k}</option>
-            ))}
-            {pemilihList.some((p) => p.jenis === "guru") && <option value="__guru__">Guru</option>}
-          </select>
-        )}
+        <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+          <div>
+            {(daftarKelas.length > 0 || pemilihList.some((p) => p.jenis === "guru")) && (
+              <select className="border rounded-lg px-3 py-1.5 text-sm" value={filterKelas} onChange={(e) => setFilterKelas(e.target.value)}>
+                <option value="">Semua kelas</option>
+                {daftarKelas.map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+                {pemilihList.some((p) => p.jenis === "guru") && <option value="__guru__">Guru</option>}
+              </select>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportExcel}
+              disabled={listTersaring.length === 0 || exportBusy !== null}
+              title={`Ekspor ${listTersaring.length} data pemilih tersaring ke file Excel (.xlsx)`}
+              className="inline-flex items-center gap-1.5 border border-emerald-600 bg-white hover:bg-emerald-50 text-emerald-700 font-medium text-xs px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {exportBusy === "excel" ? "Mengekspor..." : `Ekspor Excel (${listTersaring.length})`}
+            </button>
+
+            <button
+              onClick={handleExportPdf}
+              disabled={listTersaring.length === 0 || exportBusy !== null}
+              title={`Ekspor ${listTersaring.length} data pemilih tersaring ke file PDF (.pdf)`}
+              className="inline-flex items-center gap-1.5 border border-rose-600 bg-white hover:bg-rose-50 text-rose-700 font-medium text-xs px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <svg className="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              {exportBusy === "pdf" ? "Mengekspor..." : `Ekspor PDF (${listTersaring.length})`}
+            </button>
+          </div>
+        </div>
 
         <div className="divide-y max-h-[32rem] overflow-y-auto">
           {listTersaring.map((p) => (
