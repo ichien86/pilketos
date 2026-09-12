@@ -35,16 +35,20 @@ export default function SosialisasiPage() {
   const [sosialisasiAktif, setSosialisasiAktif] = useState(false);
 
   async function refresh() {
-    const [k, v, p, fase] = await Promise.all([
-      apiFetch<Kandidat[]>("/api/kandidat"),
-      apiFetch<Video[]>("/api/video"),
-      apiFetch<Progress>("/api/progress"),
-      apiFetch<Array<{ nama_fase: string; status: string }>>("/api/fase"),
-    ]);
-    setKandidat(k);
-    setVideo(v);
-    setProgress(p);
-    setSosialisasiAktif(fase.some((f) => f.nama_fase === "sosialisasi" && f.status === "aktif"));
+    try {
+      const [k, v, p, fase] = await Promise.all([
+        apiFetch<Kandidat[]>("/api/kandidat"),
+        apiFetch<Video[]>("/api/video"),
+        apiFetch<Progress>("/api/progress"),
+        apiFetch<Array<{ nama_fase: string; status: string }>>("/api/fase"),
+      ]);
+      setKandidat(k);
+      setVideo(v);
+      setProgress(p);
+      setSosialisasiAktif(fase.some((f) => f.nama_fase === "sosialisasi" && f.status === "aktif"));
+    } catch {
+      // Error auth diintersep oleh client-fetch untuk diarahkan kembali ke login
+    }
   }
 
   useEffect(() => {

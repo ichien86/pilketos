@@ -21,6 +21,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("expired") === "1") {
+        setSessionExpiredNotice(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
+
   const [salahCount, setSalahCount] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = sessionStorage.getItem("pilketos_login_salah_count");
@@ -71,6 +83,7 @@ export default function LoginPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (lockoutSisa > 0) return;
+    setSessionExpiredNotice(false);
     setError(null);
     setLoading(true);
     try {
@@ -123,6 +136,17 @@ export default function LoginPage() {
           <h1 className="text-lg font-bold">E-Voting OSIM</h1>
           <p className="text-sm text-slate-500">MAN 3 Boyolali</p>
         </div>
+        {sessionExpiredNotice && (
+          <div className="bg-amber-50 border border-amber-300 text-amber-950 rounded-lg p-3 text-xs flex items-start gap-2.5 text-left shadow-sm">
+            <span className="text-base leading-none shrink-0">⏱️</span>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-amber-950">Sesi Telah Berakhir</p>
+              <p className="text-amber-800 leading-relaxed text-[11px]">
+                Sesi login Anda telah kedaluwarsa atau belum masuk. Silakan login kembali dengan memasukkan username &amp; password Anda.
+              </p>
+            </div>
+          </div>
+        )}
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label htmlFor="login-username" className="text-sm font-medium block mb-1">Username (NIS/NIP/NIK)</label>
