@@ -28,6 +28,11 @@ interface Pemilih {
   sosialisasi_wajib: number;
   memenuhi_syarat: boolean | null;
   sudah_memilih?: boolean;
+  status_pemilihan?: "belum_memilih" | "belum_scan_keluar" | "selesai";
+  selesai_coblos_at?: string | null;
+  menit_sejak_coblos?: number;
+  bisa_ubah_manual?: boolean;
+  alasan_keluar_manual?: string | null;
 }
 
 const FORM_KOSONG = { jenis: "siswa" as "siswa" | "guru", nis_nip: "", nama: "", kelas_pangkat: "", tanggal_lahir: "" };
@@ -48,7 +53,7 @@ export default function AdminDptPage() {
   const [cari, setCari] = useState("");
   const cariInputRef = useRef<HTMLInputElement>(null);
   const [filterKelas, setFilterKelas] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi" | "sudah_memilih" | "belum_memilih">("semua");
+  const [filterStatus, setFilterStatus] = useState<"semua" | "belum_aktivasi" | "belum_sosialisasi" | "sudah_memilih" | "belum_scan_keluar" | "belum_memilih">("semua");
   const [tambahForm, setTambahForm] = useState(FORM_KOSONG);
   const [tambahError, setTambahError] = useState<string | null>(null);
   const [tambahBusy, setTambahBusy] = useState(false);
@@ -56,6 +61,45 @@ export default function AdminDptPage() {
   const [editForm, setEditForm] = useState(FORM_KOSONG);
   const [editError, setEditError] = useState<string | null>(null);
   const [exportBusy, setExportBusy] = useState<"excel" | "pdf" | null>(null);
+
+  // State Modal Verifikasi Keluar Manual
+  const [modalKeluarTarget, setModalKeluarTarget] = useState<Pemilih | null>(null);
+  const [alasanKeluar, setAlasanKeluar] = useState("Kendala teknis device / HP mati");
+  const [detailAlasanLainnya, setDetailAlasanLainnya] = useState("");
+  const [busyKeluarManual, setBusyKeluarManual] = useState(false);
+  const [errorKeluarManual, setErrorKeluarManual] = useState<string | null>(null);
+  const [successKeluarManual, setSuccessKeluarManual] = useState<string | null>(null);
+
+  function bukaModalKeluarManual(p: Pemilih) {
+    setModalKeluarTarget(p);
+    setAlasanKeluar("Kendala teknis device / HP mati");
+    setDetailAlasanLainnya("");
+    setErrorKeluarManual(null);
+  }
+
+  async function handleSimpanKeluarManual(e: React.FormEvent) {
+    e.preventDefault();
+    if (!modalKeluarTarget || busyKeluarManual) return;
+    setBusyKeluarManual(true);
+    setErrorKeluarManual(null);
+    try {
+      await apiFetch("/api/panitia/exit-scan/manual", {
+        method: "POST",
+        body: JSON.stringify({
+          pemilihId: modalKeluarTarget._id,
+          alasan: alasanKeluar,
+          detailAlasan: detailAlasanLainnya,
+        }),
+      });
+      setSuccessKeluarManual(`✓ Berhasil memverifikasi keluar manual untuk ${modalKeluarTarget.nama}`);
+      setModalKeluarTarget(null);
+      await refreshPemilih();
+    } catch (err) {
+      setErrorKeluarManual(err instanceof ApiError ? err.message : "Gagal memverifikasi keluar manual");
+    } finally {
+      setBusyKeluarManual(false);
+    }
+  }
 
   async function handleExportExcel() {
     if (listTersaring.length === 0) return;
@@ -127,16 +171,18 @@ export default function AdminDptPage() {
         filterStatus === "semua" ||
         (filterStatus === "belum_aktivasi" && !p.aktivasi_selesai) ||
         (filterStatus === "belum_sosialisasi" && p.memenuhi_syarat === false) ||
-        (filterStatus === "sudah_memilih" && p.sudah_memilih) ||
-        (filterStatus === "belum_memilih" && !p.sudah_memilih);
+        (filterStatus === "sudah_memilih" && (p.sudah_memilih || p.status_pemilihan === "selesai")) ||
+        (filterStatus === "belum_scan_keluar" && p.status_pemilihan === "belum_scan_keluar") ||
+        (filterStatus === "belum_memilih" && (!p.sudah_memilih && p.status_pemilihan !== "belum_scan_keluar" && p.status_pemilihan !== "selesai"));
       return cocokCari && cocokKelas && cocokStatus;
     });
   }, [pemilihList, cari, filterKelas, filterStatus]);
 
   const jumlahBelumAktivasi = useMemo(() => pemilihList.filter((p) => !p.aktivasi_selesai).length, [pemilihList]);
   const jumlahBelumSosialisasi = useMemo(() => pemilihList.filter((p) => p.memenuhi_syarat === false).length, [pemilihList]);
-  const jumlahSudahMemilih = useMemo(() => pemilihList.filter((p) => p.sudah_memilih).length, [pemilihList]);
-  const jumlahBelumMemilih = useMemo(() => pemilihList.filter((p) => !p.sudah_memilih).length, [pemilihList]);
+  const jumlahSudahMemilih = useMemo(() => pemilihList.filter((p) => p.sudah_memilih || p.status_pemilihan === "selesai").length, [pemilihList]);
+  const jumlahBelumScanKeluar = useMemo(() => pemilihList.filter((p) => p.status_pemilihan === "belum_scan_keluar").length, [pemilihList]);
+  const jumlahBelumMemilih = useMemo(() => pemilihList.filter((p) => !p.sudah_memilih && p.status_pemilihan !== "belum_scan_keluar" && p.status_pemilihan !== "selesai").length, [pemilihList]);
 
   async function jalankan(mode: "dry-run" | "commit") {
     if (!file) return;
@@ -351,7 +397,20 @@ export default function AdminDptPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        {/* Banner Pesan Sukses Verifikasi Keluar Manual */}
+        {successKeluarManual && (
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-950 p-3 rounded-lg text-xs flex items-center justify-between shadow-sm">
+            <span>{successKeluarManual}</span>
+            <button
+              onClick={() => setSuccessKeluarManual(null)}
+              className="text-emerald-800 hover:text-emerald-950 font-bold ml-2 text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs">
           <button
             onClick={() => setFilterStatus(filterStatus === "belum_aktivasi" ? "semua" : "belum_aktivasi")}
             className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_aktivasi" ? "bg-slate-900 text-white" : "bg-slate-100"}`}
@@ -374,8 +433,22 @@ export default function AdminDptPage() {
             <div>sudah memilih</div>
           </button>
           <button
+            onClick={() => setFilterStatus(filterStatus === "belum_scan_keluar" ? "semua" : "belum_scan_keluar")}
+            className={`rounded-lg px-3 py-2 text-left border transition ${
+              filterStatus === "belum_scan_keluar"
+                ? "bg-amber-600 text-white border-amber-700"
+                : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+            }`}
+          >
+            <div className="font-bold text-sm flex items-center gap-1">
+              <span>{jumlahBelumScanKeluar}</span>
+              {jumlahBelumScanKeluar > 0 && <span className="text-xs">⚠️</span>}
+            </div>
+            <div>belum scan keluar</div>
+          </button>
+          <button
             onClick={() => setFilterStatus(filterStatus === "belum_memilih" ? "semua" : "belum_memilih")}
-            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_memilih" ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-800"}`}
+            className={`rounded-lg px-3 py-2 text-left ${filterStatus === "belum_memilih" ? "bg-slate-600 text-white" : "bg-slate-100 text-slate-700"}`}
           >
             <div className="font-bold text-sm">{jumlahBelumMemilih}</div>
             <div>belum memilih</div>
@@ -462,8 +535,25 @@ export default function AdminDptPage() {
               ) : (
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium">{p.nama} <span className="text-slate-400 font-normal">-- {p.nis_nip}</span></p>
-                    <p className="text-slate-400 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium">{p.nama} <span className="text-slate-400 font-normal">-- {p.nis_nip}</span></p>
+                      {p.status_pemilihan === "selesai" || p.sudah_memilih ? (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                          <span>✓ Selesai Memilih</span>
+                          {p.alasan_keluar_manual && (
+                            <span className="text-emerald-700 italic font-normal">({p.alasan_keluar_manual})</span>
+                          )}
+                        </span>
+                      ) : p.status_pemilihan === "belum_scan_keluar" ? (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-900 flex items-center gap-1 border border-amber-300">
+                          <span>⚠️ Belum Scan Keluar</span>
+                          <span className="text-amber-700 font-normal">
+                            ({p.menit_sejak_coblos ?? 0} mnt lalu)
+                          </span>
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-slate-400 text-xs mt-0.5">
                       {p.jenis === "siswa" ? p.kelas : p.pangkat} &middot; lahir {p.tanggal_lahir} &middot;{" "}
                       {p.aktivasi_selesai ? <span className="text-emerald-600">sudah aktivasi</span> : <span>belum aktivasi</span>}
                       {" "}&middot;{" "}
@@ -477,7 +567,22 @@ export default function AdminDptPage() {
                     </p>
                   </div>
                   {!isPengawas && (
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                      {p.status_pemilihan === "belum_scan_keluar" && (
+                        p.bisa_ubah_manual ? (
+                          <button
+                            type="button"
+                            onClick={() => bukaModalKeluarManual(p)}
+                            className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium px-2.5 py-1 rounded-md shadow-sm transition"
+                          >
+                            Tandai Keluar Manual
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-amber-800 italic bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                            Tunggu {Math.max(1, 5 - (p.menit_sejak_coblos ?? 0))} mnt lagi
+                          </span>
+                        )
+                      )}
                       <button onClick={() => mulaiEdit(p)} className="text-xs text-blue-600 hover:underline">Edit</button>
                       <button onClick={() => hapusPemilih(p)} className="text-xs text-red-600 hover:underline">Hapus</button>
                     </div>
@@ -509,6 +614,106 @@ export default function AdminDptPage() {
           </p>
         )}
       </div>
+      )}
+
+      {/* Modal Dialog Verifikasi Keluar Manual */}
+      {modalKeluarTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div>
+              <h3 className="font-bold text-base text-slate-900">Tandai Keluar Manual</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Verifikasi manual untuk pemilih yang sudah mencoblos di bilik suara namun berhalangan scan barcode di meja keluar.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1">
+              <div><span className="text-slate-500">Nama:</span> <span className="font-semibold text-slate-800">{modalKeluarTarget.nama}</span></div>
+              <div><span className="text-slate-500">{modalKeluarTarget.jenis === "siswa" ? "NIS / Kelas:" : "NIP / Pangkat:"}</span> <span className="font-semibold text-slate-800">{modalKeluarTarget.nis_nip} ({modalKeluarTarget.jenis === "siswa" ? modalKeluarTarget.kelas : modalKeluarTarget.pangkat})</span></div>
+              <div><span className="text-slate-500">Waktu Coblos:</span> <span className="font-semibold text-amber-700">{modalKeluarTarget.menit_sejak_coblos ?? 0} menit yang lalu</span></div>
+            </div>
+
+            <form onSubmit={handleSimpanKeluarManual} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Alasan Keluar Manual <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="alasanKeluar"
+                      value="Kendala teknis device / HP mati"
+                      checked={alasanKeluar === "Kendala teknis device / HP mati"}
+                      onChange={(e) => setAlasanKeluar(e.target.value)}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Kendala teknis device / HP mati</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="alasanKeluar"
+                      value="Harus masuk kelas lagi"
+                      checked={alasanKeluar === "Harus masuk kelas lagi"}
+                      onChange={(e) => setAlasanKeluar(e.target.value)}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Harus masuk kelas lagi</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="alasanKeluar"
+                      value="Lainnya"
+                      checked={alasanKeluar === "Lainnya"}
+                      onChange={(e) => setAlasanKeluar(e.target.value)}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Lainnya (sebutkan alasan)</span>
+                  </label>
+                </div>
+
+                {alasanKeluar === "Lainnya" && (
+                  <div className="pt-2">
+                    <textarea
+                      required
+                      placeholder="Jelaskan alasan pemilih tidak scan keluar..."
+                      rows={2}
+                      value={detailAlasanLainnya}
+                      onChange={(e) => setDetailAlasanLainnya(e.target.value)}
+                      className="w-full text-xs border rounded-lg p-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {errorKeluarManual && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2.5 rounded-lg">
+                  {errorKeluarManual}
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalKeluarTarget(null)}
+                  disabled={busyKeluarManual}
+                  className="px-3 py-1.5 border rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={busyKeluarManual}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {busyKeluarManual ? "Memproses..." : "Konfirmasi Selesai"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </main>
   );

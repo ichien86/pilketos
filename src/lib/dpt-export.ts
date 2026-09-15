@@ -29,6 +29,7 @@ export function getDptExportMetadata(
     belum_sosialisasi: { judul: "BELUM SOSIALISASI", file: "Belum_Sosialisasi" },
     belum_aktivasi: { judul: "BELUM AKTIVASI", file: "Belum_Aktivasi" },
     sudah_memilih: { judul: "SUDAH MEMILIH", file: "Sudah_Memilih" },
+    belum_scan_keluar: { judul: "SUDAH MEMILIH BELUM SCAN KELUAR", file: "Belum_Scan_Keluar" },
     belum_memilih: { judul: "BELUM MEMILIH", file: "Belum_Memilih" },
   };
 
@@ -300,7 +301,7 @@ export async function exportDptToPdf(
       fillColor: [248, 250, 252], // slate-50
     },
     margin: { left: 14, right: 14, top: 28, bottom: 18 },
-    didDrawPage: (hookData) => {
+    didDrawPage: (hookData: { pageNumber: number }) => {
       // Footer: Halaman X dari Y
       const pageCount = doc.getNumberOfPages();
       doc.setFontSize(8);

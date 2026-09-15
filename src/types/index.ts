@@ -136,6 +136,8 @@ export interface SesiPemilih {
   barcode_bukti_hash: string | null;
   barcode_bukti_plain: string | null; // dipakai untuk render ulang QR di layar pemilih (US-15) -- lihat catatan lib/voteToken.ts
   barcode_used_at: Date | null;
+  keluar_manual?: boolean;
+  alasan_keluar_manual?: string | null;
   kandidat_dipilih_nomor: number | null; // hanya dipakai internal cron/debug, TIDAK pernah diexpose ke client bareng pemilih_id
 }
 

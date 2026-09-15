@@ -47,28 +47,43 @@ export async function GET(req: NextRequest) {
     progressList.map((pr) => [pr.pemilih_id, pr.video_ditonton.filter((id) => idKandidatWajib.has(id)).length])
   );
 
-  // Cek juga sesi_pemilih yang sudah selesai/scan keluar agar status di DPT
-  // selalu sinkron 100% dengan Rekonsiliasi, termasuk data lama.
-  const sesiSelesaiList = await db
+  // Ambil sesi_pemilih terbaru untuk tiap pemilih untuk mendeteksi status
+  // pemilihan: selesai, belum scan keluar (dengan hitungan menit), atau belum memilih.
+  const sesiList = await db
     .collection<import("@/types").SesiPemilih>("sesi_pemilih")
     .find(
+      { pemilih_id: { $in: list.map((p) => p._id) } },
       {
-        pemilih_id: { $in: list.map((p) => p._id) },
-        $or: [
-          { status: "selesai" },
-          { barcode_used_at: { $ne: null } },
-        ],
-      },
-      { projection: { pemilih_id: 1 } }
+        projection: {
+          pemilih_id: 1,
+          status: 1,
+          selesai_at: 1,
+          barcode_used_at: 1,
+          keluar_manual: 1,
+          alasan_keluar_manual: 1,
+          antre_at: 1,
+        },
+      }
     )
+    .sort({ antre_at: -1 })
     .toArray();
-  const sudahSelesaiSet = new Set(sesiSelesaiList.map((s) => s.pemilih_id));
 
-  // Auto-sync ke dokumen pemilih_dpt jika ada sesi keluar yang belum tertandai
-  const toSync = Array.from(sudahSelesaiSet).filter((id) => {
-    const pemilih = list.find((item) => item._id === id);
-    return pemilih && !pemilih.sudah_memilih;
-  });
+  const sesiByPemilih = new Map<string, import("@/types").SesiPemilih>();
+  for (const s of sesiList) {
+    if (!sesiByPemilih.has(s.pemilih_id)) {
+      sesiByPemilih.set(s.pemilih_id, s);
+    }
+  }
+
+  // Auto-sync ke dokumen pemilih_dpt jika ada sesi selesai yang belum tertandai
+  const toSync = list
+    .filter((item) => {
+      const s = sesiByPemilih.get(item._id);
+      const isSelesai = s?.status === "selesai" || !!s?.barcode_used_at;
+      return isSelesai && !item.sudah_memilih;
+    })
+    .map((p) => p._id);
+
   if (toSync.length > 0) {
     await db.collection<PemilihDpt>("pemilih_dpt").updateMany(
       { _id: { $in: toSync } },
@@ -76,21 +91,51 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const nowMs = Date.now();
+
   return NextResponse.json(
-    list.map((p) => ({
-      _id: p._id,
-      jenis: p.jenis,
-      nis_nip: p.nis_nip,
-      nama: p.nama,
-      kelas: p.kelas,
-      pangkat: p.pangkat,
-      tanggal_lahir: p.tanggal_lahir,
-      aktivasi_selesai: aktivasiByPemilih.get(p._id) ?? false,
-      sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
-      sosialisasi_wajib: totalWajibTonton,
-      memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
-      sudah_memilih: !!p.sudah_memilih || sudahSelesaiSet.has(p._id),
-    }))
+    list.map((p) => {
+      const sesi = sesiByPemilih.get(p._id);
+      const isSelesai = Boolean(p.sudah_memilih || sesi?.status === "selesai" || sesi?.barcode_used_at);
+      const isBelumScan = !isSelesai && sesi?.status === "sudah_memilih" && !sesi.barcode_used_at;
+
+      let status_pemilihan: "belum_memilih" | "belum_scan_keluar" | "selesai" = "belum_memilih";
+      let selesai_coblos_at: string | null = null;
+      let menit_sejak_coblos = 0;
+      let bisa_ubah_manual = false;
+
+      if (isSelesai) {
+        status_pemilihan = "selesai";
+      } else if (isBelumScan) {
+        status_pemilihan = "belum_scan_keluar";
+        if (sesi?.selesai_at) {
+          selesai_coblos_at = new Date(sesi.selesai_at).toISOString();
+          const diffMs = nowMs - new Date(sesi.selesai_at).getTime();
+          menit_sejak_coblos = Math.max(0, Math.floor(diffMs / 60000));
+          bisa_ubah_manual = diffMs >= 5 * 60 * 1000; // jeda 5 menit
+        }
+      }
+
+      return {
+        _id: p._id,
+        jenis: p.jenis,
+        nis_nip: p.nis_nip,
+        nama: p.nama,
+        kelas: p.kelas,
+        pangkat: p.pangkat,
+        tanggal_lahir: p.tanggal_lahir,
+        aktivasi_selesai: aktivasiByPemilih.get(p._id) ?? false,
+        sosialisasi_ditonton: progressByPemilih.get(p._id) ?? 0,
+        sosialisasi_wajib: totalWajibTonton,
+        memenuhi_syarat: totalWajibTonton === 0 ? null : (progressByPemilih.get(p._id) ?? 0) >= totalWajibTonton,
+        sudah_memilih: isSelesai,
+        status_pemilihan,
+        selesai_coblos_at,
+        menit_sejak_coblos,
+        bisa_ubah_manual,
+        alasan_keluar_manual: sesi?.alasan_keluar_manual ?? null,
+      };
+    })
   );
 }
 
