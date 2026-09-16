@@ -8,8 +8,9 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 const GLOBAL_LIMIT = 1800; // max requests (~30 req/detik per IP publik)
 const GLOBAL_WINDOW = 60; // per 60 detik
 
-// Endpoint polling frekuensi tinggi yang aman dibypass dari limit ketat
+// Endpoint polling frekuensi tinggi dan health check yang aman dibypass dari limit ketat
 const BYPASS_PREFIXES = [
+  "/api/health",
   "/api/checkin/status",
   "/api/fase",
   "/api/hasil",

@@ -20,7 +20,13 @@ function getUri(): string {
 
 function getClientPromise(): Promise<MongoClient> {
   if (!global.__mongoClientPromise) {
-    const client = new MongoClient(getUri(), { maxPoolSize: 10 });
+    const client = new MongoClient(getUri(), {
+      maxPoolSize: 100,
+      minPoolSize: 5,
+      maxIdleTimeMS: 60000,
+      waitQueueTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000,
+    });
     const promise = client.connect();
     // Kalau percobaan koneksi pertama gagal (mis. network access Atlas belum
     // terbuka, blip jaringan sesaat), JANGAN cache promise yang reject --
